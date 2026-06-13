@@ -30,6 +30,44 @@ A complete guide and codebase to build your own private, high-performance, secur
 
 ## 📊 System Architecture & Traffic Flow
 
+### 1. Conceptual Flow (ASCII Map)
+
+```text
+                   ┌──────────────────────────────────────────┐
+                   │               Client Device              │
+                   └─────────────────────┬────────────────────┘
+                                         │
+                 DoH (HTTPS / Port 443)  │  DoT (TLS / Port 853)
+                 ┌───────────────────────┴───────────────────────┐
+                 ▼                                               ▼
+     ┌───────────────────────┐                       ┌───────────────────────┐
+     │ Nginx Reverse Proxy   │                       │  AdGuard Home DoT     │
+     │   (Port 443 / SSL)    │                       │     (Port 853)        │
+     └───────────┬───────────┘                       └───────────┬───────────┘
+                 │ Proxy Pass to                                 │
+                 │ AdGuard DoH (Port 8444)                       │
+                 ▼                                               │
+     ┌───────────────────────────────────────────────────────────▼───────────┐
+     │                     AdGuard Home DNS Core                             │
+     │    (Filters queries, blocks ads/malware, cache hits resolution)       │
+     └───────────┬───────────────────────────────────────────────┬───────────┘
+                 │                                               │
+                 │ Query Details (UDP/TCP)                       │ Resolves Clean Domain
+                 ▼                                               ▼
+     ┌────────────────────────┐                      ┌───────────────────────┐
+     │  Python Stats API      │                      │  Upstream DNS Core    │
+     │      (Port 8085)       │                      │  (Cloudflare/Google)  │
+     └───────────┬────────────┘                      └───────────────────────┘
+                 │ Serves stats over /api/stats
+                 ▼
+     ┌────────────────────────┐
+     │ RealTime Web Dashboard │
+     │  (Canvas flow system)  │
+     └────────────────────────┘
+```
+
+### 2. Detailed Logical Diagram (Mermaid)
+
 ```mermaid
 flowchart TD
     Client[Client Device] -->|DoH / HTTPS / Port 443| Nginx[Nginx Reverse Proxy]
@@ -52,6 +90,17 @@ flowchart TD
     AdGuard_Home_DNS_Core -.->|Internal Polling| PyAPI[Python Backend Stats API - Port 8085]
     PyAPI -.->|Serve /api/stats| WebPortal[Query Visualizer HTML5 Canvas]
 ```
+
+---
+
+## 🔒 Port Configuration & Interfaces
+
+| Service / Port | Protocol | Interface Binding | Public Status | Security / Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| **Port 53 (UDP/TCP)** | Plain DNS | `127.0.0.1`, `10.66.66.1` | **BLOCKED** | Secured via firewall to prevent open resolver DDoS abuse. Only accessible via local/VPN. |
+| **Port 853 (UDP/TCP)** | DoT / DoQ | `127.0.0.1`, `10.66.66.1`, Public IP | **OPEN** | Accessible on the public network. Used for Android Private DNS. |
+| **Port 8444 (TCP)** | HTTPS / DoH | `127.0.0.1`, `10.66.66.1` | **BLOCKED** | AdGuard Home backend HTTPS/DoH server. Protected behind Nginx. |
+| **Port 443 (TCP)** | DoH Proxy | `0.0.0.0` | **OPEN** | Nginx proxies standard DoH `/dns-query` requests to internal port 8444. |
 
 ---
 
