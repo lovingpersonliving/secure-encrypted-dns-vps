@@ -207,6 +207,10 @@ WireGuard lets you connect to the server securely for management purposes (like 
    PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o enp0s6 -j MASQUERADE
    PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o enp0s6 -j MASQUERADE
    ```
+
+   > [!IMPORTANT]
+   > Replace `enp0s6` in the `PostUp` and `PostDown` rules with your VPS's actual public network interface name (e.g., `eth0`, `ens3`, or `ens5`). You can check your interface name by running `ip route | grep default` or `ip a` on your VPS.
+
 4. Enable IP forwarding in `/etc/sysctl.conf`:
    ```bash
    sudo sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/g' /etc/sysctl.conf
@@ -244,13 +248,17 @@ AdGuard Home acts as the filtering DNS core engine.
 
 A wildcard SSL certificate allows you to use client identifiers (e.g., `musab.yourdomain.duckdns.org`) dynamically. These are authenticated under the same certificate and parsed into separate client logs inside AdGuard Home!
 
-1. Copy the authenticator and cleanup hooks from `/scripts/certbot_auth.sh` and `/scripts/certbot_cleanup.sh` to `/etc/letsencrypt/` on your VPS.
-2. Edit both files to insert your personal DuckDNS subdomain and token.
-3. Make both scripts executable:
+1. Install Certbot on your VPS:
+   ```bash
+   sudo apt update && sudo apt install -y certbot
+   ```
+2. Copy the authenticator and cleanup hooks from `/scripts/certbot_auth.sh` and `/scripts/certbot_cleanup.sh` to `/etc/letsencrypt/` on your VPS.
+3. Edit both files to insert your personal DuckDNS subdomain and token.
+4. Make both scripts executable:
    ```bash
    sudo chmod +x /etc/letsencrypt/certbot_auth.sh /etc/letsencrypt/certbot_cleanup.sh
    ```
-4. Run Certbot to issue the wildcard certificate:
+5. Run Certbot to issue the wildcard certificate:
    ```bash
    sudo certbot certonly --manual --preferred-challenges=dns \
      --manual-auth-hook /etc/letsencrypt/certbot_auth.sh \
@@ -288,6 +296,10 @@ The visualizer frontend relies on a lightweight Python daemon that polls AdGuard
      sudo chmod -R 644 /var/www/html/*
      ```
 2. **Deploy Backend Python API:**
+   * Install `dnsutils` on your VPS to ensure the `dig` command is available for the backend query resolution checks:
+     ```bash
+     sudo apt update && sudo apt install -y dnsutils
+     ```
    * Copy the `stats_api.py` script to `/usr/local/bin/dnsmalik_stats_api.py` on the server.
    * Copy the systemd service file template `templates/dnsmalik-stats.service` to `/etc/systemd/system/dnsmalik-stats.service`.
    * **Set Credentials securely:** Edit `/etc/systemd/system/dnsmalik-stats.service` and insert your actual AdGuard username, password, IP bindings under the `Environment` lines. This avoids leaving credentials in the repository code:
