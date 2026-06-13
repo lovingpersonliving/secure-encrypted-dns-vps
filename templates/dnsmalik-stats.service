@@ -6,6 +6,10 @@ After=network.target AdGuardHome.service
 Type=simple
 User=root
 ExecStart=/usr/bin/python3 /usr/local/bin/dnsmalik_stats_api.py
+Environment="AGH_HOST=127.0.0.1:8082"
+Environment="AGH_USER=YOUR_ADGUARD_USERNAME"
+Environment="AGH_PASS=YOUR_ADGUARD_PASSWORD"
+Environment="DNS_RESOLVER_IP=127.0.0.1"
 Restart=always
 RestartSec=5
 

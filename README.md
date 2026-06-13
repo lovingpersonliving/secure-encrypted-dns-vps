@@ -1,67 +1,90 @@
-# Secure Encrypted DNS & Ad-Blocking Server on VPS
+# Private Secure Encrypted DNS & Ad-Blocking Server
 
-A complete guide and codebase to build a private, high-performance, secure DNS server featuring **DNS-over-HTTPS (DoH)**, **DNS-over-TLS (DoT)**, **WireGuard VPN**, and **AdGuard Home** ad-blocking. It also includes a custom real-time query visualizer web portal with live animated particle flows.
+A complete guide and codebase to build your own private, high-performance, secure DNS server featuring **DNS-over-HTTPS (DoH)**, **DNS-over-TLS (DoT)**, **WireGuard VPN**, and **AdGuard Home** ad-blocking. This repository includes a custom real-time query visualizer web portal with live animated particle flows and a Python backend stats API.
 
 ---
 
-## Architecture & Flow Overview
+## 📂 Repository Directory Structure
 
-```
-                   ┌──────────────────────────────────────────┐
-                   │               Client Device              │
-                   └─────────────────────┬────────────────────┘
-                                         │
-                 DoH (HTTPS / Port 443)  │  DoT (TLS / Port 853)
-                 ┌───────────────────────┴───────────────────────┐
-                 ▼                                               ▼
-     ┌───────────────────────┐                       ┌───────────────────────┐
-     │ Nginx Reverse Proxy   │                       │  AdGuard Home DoT     │
-     │   (Port 443 / SSL)    │                       │     (Port 853)        │
-     └───────────┬───────────┘                       └───────────┬───────────┘
-                 │ Proxy Pass to                                 │
-                 │ AdGuard DoH (Port 8444)                       │
-                 ▼                                               │
-     ┌───────────────────────────────────────────────────────────▼───────────┐
-     │                     AdGuard Home DNS Core                             │
-     │    (Filters queries, blocks ads/malware, cache hits resolution)       │
-     └───────────┬───────────────────────────────────────────────┬───────────┘
-                 │                                               │
-                 │ Query Details (UDP/TCP)                       │ Resolves Clean Domain
-                 ▼                                               ▼
-     ┌────────────────────────┐                      ┌───────────────────────┐
-     │  Python Stats API      │                      │  Upstream DNS Core    │
-     │      (Port 8085)       │                      │  (Cloudflare/Google)  │
-     └───────────┬────────────┘                      └───────────────────────┘
-                 │ Serves stats over /api/stats
-                 ▼
-     ┌────────────────────────┐
-     │ RealTime Web Dashboard │
-     │  (Canvas flow system)  │
-     └────────────────────────┘
+```text
+├── apple-profiles/
+│   └── dns.mobileconfig       # Configuration profile template for iOS / macOS
+├── scripts/
+│   ├── duckdns_update.sh      # Dynamic IP updates updater script for DuckDNS
+│   ├── certbot_auth.sh        # Certbot DNS-01 auth hook script
+│   └── certbot_cleanup.sh     # Certbot DNS-01 cleanup hook script
+├── templates/
+│   ├── nginx-default.conf     # Nginx reverse proxy configuration template
+│   └── dnsmalik-stats.service # systemd stats-api daemon service config template
+├── stats_api.py               # Backend statistics and query resolution Python API
+├── RealTime.html              # Frontend Query Visualizer Dashboard (HTML5 Canvas)
+├── index.html                 # Main Web Portal Home page
+├── faq.html                   # Frequently Asked Questions page
+├── privacy.html               # Personal privacy policy page
+├── status.html                # Operational status page
+├── contact.html               # Support and contact page
+└── README.md                  # This complete documentation guide
 ```
 
 ---
 
-## 🛠️ Step 1: Free Domain Setup via DuckDNS.org
+## 📊 System Architecture & Traffic Flow
+
+```mermaid
+flowchart TD
+    Client[Client Device] -->|DoH / HTTPS / Port 443| Nginx[Nginx Reverse Proxy]
+    Client -->|DoT / TLS / Port 853| AGH_DoT[AdGuard Home DNS Core]
+    
+    Nginx -->|Proxy Pass / Port 8444| AGH_DoH[AdGuard Home DNS Core]
+    
+    subgraph AdGuard Home DNS Core [AdGuard Home DNS Engine]
+        AGH_DoT
+        AGH_DoH
+    end
+    
+    AdGuard_Home_DNS_Core -->|Filter Lists / 2.1M Rules| Blocked{Blocked?}
+    Blocked -->|Yes| BlockResponse[Return 0.0.0.0 / Blocked Page]
+    Blocked -->|No| CacheCheck{Cached?}
+    
+    CacheCheck -->|Yes| CacheResponse[Resolve from DNS Cache]
+    CacheCheck -->|No| Upstream[Query Upstream DNS: Cloudflare/Google]
+    
+    AdGuard_Home_DNS_Core -.->|Internal Polling| PyAPI[Python Backend Stats API - Port 8085]
+    PyAPI -.->|Serve /api/stats| WebPortal[Query Visualizer HTML5 Canvas]
+```
+
+---
+
+## 🗺️ Deployment Roadmap
+
+```mermaid
+graph TD
+    A[1. Setup DuckDNS Domain] --> B[2. VPS Firewall Hardening]
+    B --> C[3. Install WireGuard VPN]
+    C --> D[4. Install AdGuard Home]
+    D --> E[5. Acquire Wildcard SSL Cert]
+    E --> F[6. Configure Nginx Proxy]
+    F --> G[7. Run Web Portal & API Daemon]
+    G --> H[8. Connect Clients]
+```
+
+---
+
+## 🛠️ Step-by-Step Installation Guide
+
+### Step 1: Free Domain Setup via DuckDNS.org
 
 To support secure encryption (DoH/DoT), you need a domain name to bind your SSL certificates. DuckDNS provides free domains with dynamic IP update support.
 
 1. Go to [DuckDNS.org](https://www.duckdns.org/) and log in.
 2. Create a subdomain (e.g., `yourdomain`).
-3. Add your VPS public IPv4 address (`A` record).
-4. If your VPS has IPv6 enabled, add your public IPv6 address (`AAAA` record).
-5. **Auto-Update Script:** To ensure your DuckDNS domain always points to your VPS IP, set up an automatic update script on your VPS:
-   * Create a script at `/etc/duckdns/duck.sh`:
-     ```bash
-     #!/bin/bash
-     echo url="https://www.duckdns.org/update?domains=YOUR_SUBDOMAIN&token=YOUR_DUCKDNS_TOKEN&ip=" | curl -k -o /var/log/duckdns.log -K -
-     ```
-   * Set executable permissions:
+3. Add your VPS public IPv4 address (`A` record) and public IPv6 address (`AAAA` record) if available.
+4. **Auto-Update Script:** 
+   * Copy the template script in `/scripts/duckdns_update.sh` to `/etc/duckdns/duck.sh` on your VPS.
+   * Edit `/etc/duckdns/duck.sh` to input your personal subdomain name and DuckDNS token.
+   * Make it executable and configure a cron job to run it every 5 minutes:
      ```bash
      sudo chmod 700 /etc/duckdns/duck.sh
-     ```
-   * Add a cron job to run it every 5 minutes:
-     ```bash
      crontab -e
      # Add the following line:
      */5 * * * * /etc/duckdns/duck.sh >/dev/null 2>&1
@@ -69,19 +92,19 @@ To support secure encryption (DoH/DoT), you need a domain name to bind your SSL 
 
 ---
 
-## 🔒 Step 2: VPS Firewall & Network Hardening
+### Step 2: VPS Firewall & Network Hardening
 
 To prevent your DNS server from being abused in Open Resolver DDoS amplification attacks, public access to standard **Port 53 (UDP/TCP)** must be blocked, while keeping **Port 443 (DoH)** and **Port 853 (DoT)** open.
 
-### 1. Cloud Infrastructure Ingress Rules (e.g., Oracle Cloud OCI)
-Add the following Ingress rules in your VPS Virtual Cloud Network (VCN) Security Lists:
+#### 1. Cloud Infrastructure Ingress Rules (Security Lists / Security Groups)
+Add the following Ingress rules in your Cloud Server's firewall settings:
 * **TCP Port 22 / 2222** (SSH Management)
 * **TCP Port 80** (HTTP - required for Let's Encrypt verification)
 * **TCP Port 443** (HTTPS - DNS-over-HTTPS)
 * **TCP & UDP Port 853** (DNS-over-TLS / DNS-over-QUIC)
 * **UDP Port 51820** (WireGuard VPN)
 
-### 2. Host Firewall (UFW / iptables) configuration
+#### 2. Host Firewall (UFW / iptables) Configuration
 Run the following commands on your Ubuntu VPS to secure Port 53 and allow encrypted protocols:
 ```bash
 # Allow standard SSH and WireGuard VPN
@@ -109,7 +132,7 @@ sudo ufw enable
 
 ---
 
-## 🛡️ Step 3: Install & Configure WireGuard
+### Step 3: Install & Configure WireGuard
 
 WireGuard lets you connect to the server securely for management purposes (like viewing the AdGuard Home Admin UI).
 
@@ -144,7 +167,7 @@ WireGuard lets you connect to the server securely for management purposes (like 
 
 ---
 
-## 🐳 Step 4: Install AdGuard Home
+### Step 4: Install AdGuard Home
 
 AdGuard Home acts as the filtering DNS core engine.
 
@@ -160,48 +183,32 @@ AdGuard Home acts as the filtering DNS core engine.
    * Enable encryption.
    * Server Name: `yourdomain.duckdns.org`
    * Bind the **DNS-over-TLS** server to port `853`.
-   * Bind the **DNS-over-HTTPS** server to port `8444` (we will use Nginx on port `443` as the public-facing DoH proxy).
+   * Bind the **DNS-over-HTTPS** server to port `8444`.
    * Provide the paths to your SSL certificates (configured in Step 5).
 
 ---
 
-## 🔑 Step 5: Acquire a Wildcard SSL Certificate (Certbot)
+### Step 5: Acquire a Wildcard SSL Certificate (Certbot)
 
 A wildcard SSL certificate allows you to use client identifiers (e.g., `musab.yourdomain.duckdns.org`) dynamically. These are authenticated under the same certificate and parsed into separate client logs inside AdGuard Home!
 
-### 1. Manual Setup with DuckDNS DNS-01 Verification
-Since DuckDNS does not have an official certbot plugin out-of-the-box, we perform DNS-01 validation using manual scripts.
-
-* Create the authenticator script `/etc/letsencrypt/duckdns.sh`:
-  ```bash
-  #!/bin/bash
-  TOKEN="YOUR_DUCKDNS_TOKEN"
-  DOMAIN="YOUR_SUBDOMAIN"
-  curl -s "https://www.duckdns.org/update?domains=$DOMAIN&token=$TOKEN&txt=$CERTBOT_VALIDATION"
-  sleep 30
-  ```
-* Create the cleanup script `/etc/letsencrypt/duckdns-clean.sh`:
-  ```bash
-  #!/bin/bash
-  TOKEN="YOUR_DUCKDNS_TOKEN"
-  DOMAIN="YOUR_SUBDOMAIN"
-  curl -s "https://www.duckdns.org/update?domains=$DOMAIN&token=$TOKEN&clear=true"
-  ```
-* Make both executable:
-  ```bash
-  sudo chmod +x /etc/letsencrypt/duckdns.sh /etc/letsencrypt/duckdns-clean.sh
-  ```
-* Run Certbot to issue the wildcard certificate:
-  ```bash
-  sudo certbot certonly --manual --preferred-challenges=dns \
-    --manual-auth-hook /etc/letsencrypt/duckdns.sh \
-    --manual-cleanup-hook /etc/letsencrypt/duckdns-clean.sh \
-    -d "yourdomain.duckdns.org" -d "*.yourdomain.duckdns.org"
-  ```
+1. Copy the authenticator and cleanup hooks from `/scripts/certbot_auth.sh` and `/scripts/certbot_cleanup.sh` to `/etc/letsencrypt/` on your VPS.
+2. Edit both files to insert your personal DuckDNS subdomain and token.
+3. Make both scripts executable:
+   ```bash
+   sudo chmod +x /etc/letsencrypt/certbot_auth.sh /etc/letsencrypt/certbot_cleanup.sh
+   ```
+4. Run Certbot to issue the wildcard certificate:
+   ```bash
+   sudo certbot certonly --manual --preferred-challenges=dns \
+     --manual-auth-hook /etc/letsencrypt/certbot_auth.sh \
+     --manual-cleanup-hook /etc/letsencrypt/certbot_cleanup.sh \
+     -d "yourdomain.duckdns.org" -d "*.yourdomain.duckdns.org"
+   ```
 
 ---
 
-## 🚀 Step 6: Nginx Reverse Proxy Configuration
+### Step 6: Nginx Reverse Proxy Configuration
 
 Nginx hosts our visualizer web files and proxies public incoming `/dns-query` (DoH) requests on port `443` to AdGuard Home's internal HTTP server running on port `8444`.
 
@@ -209,7 +216,7 @@ Nginx hosts our visualizer web files and proxies public incoming `/dns-query` (D
    ```bash
    sudo apt install -y nginx
    ```
-2. Copy the configuration provided in `nginx-default.conf` into `/etc/nginx/sites-available/default`.
+2. Copy the configuration provided in `templates/nginx-default.conf` into `/etc/nginx/sites-available/default` on your server.
 3. Check config and reload Nginx:
    ```bash
    sudo nginx -t && sudo systemctl reload nginx
@@ -217,7 +224,7 @@ Nginx hosts our visualizer web files and proxies public incoming `/dns-query` (D
 
 ---
 
-## 📊 Step 7: Web Portal & Python Stats API Deployment
+### Step 7: Web Portal & Python Stats API Deployment
 
 The visualizer frontend relies on a lightweight Python daemon that polls AdGuard Home statistics locally and presents them via a secure API.
 
@@ -229,8 +236,15 @@ The visualizer frontend relies on a lightweight Python daemon that polls AdGuard
      sudo chmod -R 644 /var/www/html/*
      ```
 2. **Deploy Backend Python API:**
-   * Copy the `stats_api.py` script to `/usr/local/bin/dnsmalik_stats_api.py`.
-   * Copy the `dnsmalik-stats.service` systemd config file to `/etc/systemd/system/dnsmalik-stats.service`.
+   * Copy the `stats_api.py` script to `/usr/local/bin/dnsmalik_stats_api.py` on the server.
+   * Copy the systemd service file template `templates/dnsmalik-stats.service` to `/etc/systemd/system/dnsmalik-stats.service`.
+   * **Set Credentials securely:** Edit `/etc/systemd/system/dnsmalik-stats.service` and insert your actual AdGuard username, password, IP bindings under the `Environment` lines. This avoids leaving credentials in the repository code:
+     ```ini
+     Environment="AGH_HOST=10.66.66.1:8082"
+     Environment="AGH_USER=your_username"
+     Environment="AGH_PASS=your_password"
+     Environment="DNS_RESOLVER_IP=10.66.66.1"
+     ```
    * Start and enable the backend daemon:
      ```bash
      sudo systemctl daemon-reload
@@ -239,20 +253,18 @@ The visualizer frontend relies on a lightweight Python daemon that polls AdGuard
 
 ---
 
-## 📱 Step 8: Client Devices Setup Guide
+### Step 8: Client Devices Setup Guide
 
 Once the server is running, configure your client devices to use secure, encrypted DNS.
 
-### 1. Android (DoT - Port 853)
+#### 1. Android (DoT - Port 853)
 Android natively supports **DNS-over-TLS (DoT)** via the "Private DNS" setting. You can enter **any custom prefix** to identify your device in the logs.
 1. Open your Android device **Settings** ➔ **Network & Internet** ➔ **Private DNS**.
 2. Select **Private DNS provider hostname**.
-3. Enter your custom hostname. Examples:
-   * `phone.yourdomain.duckdns.org`
-   * `tablet.yourdomain.duckdns.org`
+3. Enter your custom hostname (e.g. `phone.yourdomain.duckdns.org`).
 4. Tap **Save**.
 
-### 2. Windows 11 (DoH - Port 443)
+#### 2. Windows 11 (DoH - Port 443)
 Windows 11 supports native **DNS-over-HTTPS (DoH)** templates.
 1. Open **Settings** ➔ **Network & internet** ➔ Select **Wi-Fi** or **Ethernet** ➔ click **Edit** next to **DNS server assignment** (set to **Manual**, toggle **IPv4** to **On**).
 2. **Preferred DNS:** Type your DNS server's raw IPv4 address (do not enter the HTTPS url here).
@@ -262,51 +274,7 @@ Windows 11 supports native **DNS-over-HTTPS (DoH)** templates.
 5. **Fall-back to plaintext:** Set this to **Off**.
 6. Click **Save**.
 
-### 3. macOS / iOS (DoH/DoT Profile)
+#### 3. macOS / iOS (DoH/DoT Profile)
 Apple devices require a Configuration Profile (`.mobileconfig`) to be installed for encrypted DNS.
-* Create a file named `dns.mobileconfig` with the following contents:
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.EN.dtd">
-<plist version="1.0">
-<dict>
-    <key>PayloadContent</key>
-    <array>
-        <dict>
-            <key>DNSSettings</key>
-            <dict>
-                <key>DNSProtocol</key>
-                <string>HTTPS</string>
-                <key>ServerURL</key>
-                <string>https://mac.yourdomain.duckdns.org/dns-query</string>
-            </dict>
-            <key>PayloadDescription</key>
-            <string>Configures macOS/iOS to use Secure DNS-over-HTTPS</string>
-            <key>PayloadDisplayName</key>
-            <string>Secure DoH</string>
-            <key>PayloadIdentifier</key>
-            <string>org.secure.doh</string>
-            <key>PayloadType</key>
-            <string>com.apple.dnsSettings.managed</string>
-            <key>PayloadUUID</key>
-            <string>8A6B3D6E-C1B0-4A3C-9F4D-9B8A7C6D5E4F</string>
-            <key>PayloadVersion</key>
-            <integer>1</integer>
-        </dict>
-    </array>
-    <key>PayloadDisplayName</key>
-    <string>Secure DNS</string>
-    <key>PayloadIdentifier</key>
-    <string>org.secure</string>
-    <key>PayloadRemovalDisallowed</key>
-    <false/>
-    <key>PayloadType</key>
-    <string>Configuration</string>
-    <key>PayloadUUID</key>
-    <string>9F8E7D6C-5B4A-3C2B-1A09-8F7E6D5C4B3A</string>
-    <key>PayloadVersion</key>
-    <integer>1</integer>
-</dict>
-</plist>
-```
-* Share the file with macOS (double-click to install in System Settings ➔ Profiles) or iOS (install via Settings ➔ Profile Downloaded).
+* A pre-configured profile is located in this repository at `apple-profiles/dns.mobileconfig`.
+* Download this file, replace the placeholder URL with your domain, and install it on macOS (double-click to install in System Settings ➔ Profiles) or iOS (install via Settings ➔ Profile Downloaded).

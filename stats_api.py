@@ -9,9 +9,18 @@ import random
 import threading
 import subprocess
 import re
+import os
 
 PORT = 8085
 BIND_ADDRESS = "127.0.0.1"
+
+# AdGuard Home connection settings (loaded from environment variables or defaults)
+AGH_HOST = os.environ.get("AGH_HOST", "127.0.0.1:80")
+AGH_USER = os.environ.get("AGH_USER", "admin")
+AGH_PASS = os.environ.get("AGH_PASS", "password")
+
+# IP of the local DNS resolver to perform dig queries against
+DNS_RESOLVER_IP = os.environ.get("DNS_RESOLVER_IP", "127.0.0.1")
 
 # Shared statistics cache
 stats_cache = {
@@ -64,8 +73,8 @@ class StatsHandler(http.server.BaseHTTPRequestHandler):
 
     def handle_querylog(self):
         # Fetch query log from AdGuard Home
-        url = "http://10.66.66.1:8082/control/querylog?limit=30"
-        auth_str = "themalikmusab:Admin@MALIK2030"
+        url = f"http://{AGH_HOST}/control/querylog?limit=30"
+        auth_str = f"{AGH_USER}:{AGH_PASS}"
         auth_bytes = base64.b64encode(auth_str.encode('utf-8')).decode('utf-8')
         
         req = urllib.request.Request(url)
@@ -158,8 +167,8 @@ class StatsHandler(http.server.BaseHTTPRequestHandler):
 
     def resolve_domain_real(self, domain):
         # 1. Check AdGuard check_host API to see if it is blocked
-        url = f"http://10.66.66.1:8082/control/filtering/check_host?name={urllib.parse.quote(domain)}"
-        auth_str = "themalikmusab:Admin@MALIK2030"
+        url = f"http://{AGH_HOST}/control/filtering/check_host?name={urllib.parse.quote(domain)}"
+        auth_str = f"{AGH_USER}:{AGH_PASS}"
         auth_bytes = base64.b64encode(auth_str.encode('utf-8')).decode('utf-8')
         
         req = urllib.request.Request(url)
@@ -190,7 +199,7 @@ class StatsHandler(http.server.BaseHTTPRequestHandler):
         query_time_ms = 0.0
         
         try:
-            res = subprocess.run(["dig", "@10.66.66.1", domain], capture_output=True, text=True, timeout=2.5)
+            res = subprocess.run(["dig", f"@{DNS_RESOLVER_IP}", domain], capture_output=True, text=True, timeout=2.5)
             output = res.stdout
             
             # Parse status
@@ -373,8 +382,8 @@ def get_net_usage_raw():
         return 0.2, "1.2 KB/s"
 
 def get_adguard_data_raw():
-    url = "http://10.66.66.1:8082/control/stats"
-    auth_str = "themalikmusab:Admin@MALIK2030"
+    url = f"http://{AGH_HOST}/control/stats"
+    auth_str = f"{AGH_USER}:{AGH_PASS}"
     auth_bytes = base64.b64encode(auth_str.encode('utf-8')).decode('utf-8')
     
     req = urllib.request.Request(url)

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.EN.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>DNSSettings</key>
+            <dict>
+                <key>DNSProtocol</key>
+                <string>HTTPS</string>
+                <key>ServerURL</key>
+                <string>https://mac.yourdomain.duckdns.org/dns-query</string>
+            </dict>
+            <key>PayloadDescription</key>
+            <string>Configures macOS/iOS to use Secure DNS-over-HTTPS</string>
+            <key>PayloadDisplayName</key>
+            <string>Secure DoH</string>
+            <key>PayloadIdentifier</key>
+            <string>org.secure.doh</string>
+            <key>PayloadType</key>
+            <string>com.apple.dnsSettings.managed</string>
+            <key>PayloadUUID</key>
+            <string>8A6B3D6E-C1B0-4A3C-9F4D-9B8A7C6D5E4F</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+        </dict>
+    </array>
+    <key>PayloadDisplayName</key>
+    <string>Secure DNS</string>
+    <key>PayloadIdentifier</key>
+    <string>org.secure</string>
+    <key>PayloadRemovalDisallowed</key>
+    <false/>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>9F8E7D6C-5B4A-3C2B-1A09-8F7E6D5C4B3A</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+</dict>
+</plist>
