@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNS MALIK — Real-Time Query Visualizer</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 8L15 23V53C15 75.5 35 91.5 50 95C65 91.5 85 75.5 85 53V23L50 8Z' stroke='%23E30613' stroke-width='6' fill='none'/%3E%3Cpath d='M50 18L25 29V53C25 69.5 40 81.5 50 84C60 81.5 75 69.5 75 53V29L50 18Z' fill='rgba(227, 6, 19, 0.2)' stroke='%23E30613' stroke-width='3'/%3E%3Cpath d='M38 50L46 58L62 42' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Oswald', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: { brand: '#E30613', dark: '#050505', 'dark-alt': '#0a0a0a' }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::selection { background: #E30613; color: #fff; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #E30613; border-radius: 2px; }
+        body { background: #050505; }
+
+        /* Glass */
+        .glass { background: rgba(26,26,26,0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.05); }
+        .glass-strong { background: rgba(26,26,26,0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.08); }
+
+        /* Animated background gradient for brand items */
+        .animated-gradient {
+            background: linear-gradient(-45deg, #E30613, #9e040b, #3b82f6, #050505);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Flow path glow */
+        .flow-path { filter: drop-shadow(0 0 6px rgba(227,6,19,0.4)); }
+
+        /* Packet animation along SVG path */
+        @keyframes movePacket {
+            0% { offset-distance: 0%; opacity: 0; }
+            5% { opacity: 1; }
+            95% { opacity: 1; }
+            100% { offset-distance: 100%; opacity: 0; }
+        }
+        .packet {
+            position: absolute;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            offset-rotate: 0deg;
+            animation: movePacket var(--duration, 3s) linear infinite;
+            animation-delay: var(--delay, 0s);
+        }
+        .packet-brand { background: #E30613; box-shadow: 0 0 12px #E30613, 0 0 24px rgba(227,6,19,0.4); }
+        .packet-blue { background: #3b82f6; box-shadow: 0 0 12px #3b82f6, 0 0 24px rgba(59,130,246,0.4); }
+        .packet-green { background: #10b981; box-shadow: 0 0 12px #10b981, 0 0 24px rgba(16,185,129,0.4); }
+        .packet-amber { background: #f59e0b; box-shadow: 0 0 12px #f59e0b, 0 0 24px rgba(245,158,11,0.4); }
+        .packet-red { background: #ef4444; box-shadow: 0 0 12px #ef4444, 0 0 24px rgba(239,68,68,0.4); }
+
+        /* Terminal */
+        .terminal-line { animation: termReveal 0.3s ease forwards; }
+        @keyframes termReveal {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Pulse */
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .animate-pulse-slow { animation: pulse 2s ease-in-out infinite; }
+
+        /* Node active glow */
+        .node-active { animation: nodeGlow 2s ease-in-out infinite; }
+        @keyframes nodeGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(227,6,19,0.3); }
+            50% { box-shadow: 0 0 25px rgba(227,6,19,0.6), 0 0 50px rgba(227,6,19,0.2); }
+        }
+
+        /* Reveal */
+        .reveal { opacity: 0; transform: translateY(40px); transition: all 0.7s cubic-bezier(0.23,1,0.32,1); }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+
+        /* Flow line pulse */
+        @keyframes linePulse {
+            0% { stroke-dashoffset: 20; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .flow-line {
+            stroke-dasharray: 6 4;
+            animation: linePulse 1s linear infinite;
+        }
+
+        /* Scrollbar for terminal */
+        #terminalBody::-webkit-scrollbar { width: 4px; }
+        #terminalBody::-webkit-scrollbar-track { background: transparent; }
+        #terminalBody::-webkit-scrollbar-thumb { background: rgba(227,6,19,0.3); border-radius: 2px; }
+
+        /* Domain input */
+        .domain-input:focus { outline: none; border-color: #E30613; box-shadow: 0 0 0 3px rgba(227,6,19,0.1); }
+
+        /* Toast */
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); z-index: 9999; transition: transform 0.4s cubic-bezier(0.23,1,0.32,1); }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* Counter flash */
+        @keyframes counterFlash {
+            0% { color: #fff; }
+            50% { color: #E30613; }
+            100% { color: #fff; }
+        }
+        .counter-flash { animation: counterFlash 0.4s ease; }
+
+        /* Particles canvas placement */
+        canvas#particles-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+
+        /* Hamburger */
+        .hamburger span {
+            display: block; width: 24px; height: 2px;
+            background: #fff; transition: all 0.3s;
+        }
+        .hamburger.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+        /* Flow node cards */
+        .flow-node { position: absolute; z-index: 2; width: 180px; }
+        .node-card-inner {
+            background: rgba(14,14,14,0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 12px 14px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .node-card-inner::before {
+            content: ''; position: absolute; inset: 0; border-radius: inherit;
+            background: radial-gradient(ellipse at 30% 0%, var(--node-glow, rgba(227,6,19,0.06)), transparent 70%);
+            pointer-events: none;
+        }
+        .node-pulse .node-card-inner {
+            border-color: var(--node-color, rgba(227,6,19,0.5));
+            box-shadow: 0 0 25px var(--node-glow, rgba(227,6,19,0.2)), 0 0 50px var(--node-glow2, rgba(227,6,19,0.1));
+        }
+
+        .node-led { width: 6px; height: 6px; border-radius: 50%; background: #10b981; animation: ledPulse 2s ease infinite; }
+        @keyframes ledPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        .node-payload {
+            font-size: 9px; font-family: 'JetBrains Mono', monospace; color: #6b7280;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            transition: color 0.3s;
+        }
+        .node-payload.active { color: var(--node-color-rgb, #E30613); }
+
+        .node-counter { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #9ca3af; }
+
+        /* Scan line effect */
+        @keyframes scanLine { 0% { top: 0%; } 100% { top: 100%; } }
+        .scan-line {
+            position: absolute; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(227,6,19,0.15), transparent);
+            animation: scanLine 4s linear infinite;
+            pointer-events: none; z-index: 3;
+        }
+    
+    </style>
+</head>
+<body class="text-white font-sans overflow-x-hidden bg-dark">
+
+    <!-- Particle Background -->
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- NAVIGATION -->
+    <nav id="navbar" class="fixed top-0 left-0 w-full z-50 transition-all duration-500">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="/index.html" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-lg animated-gradient flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 8L15 23V53C15 75.5 35 91.5 50 95C65 91.5 85 75.5 85 53V23L50 8Z" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M50 18L25 29V53C25 69.5 40 81.5 50 84C60 81.5 75 69.5 75 53V29L50 18Z" fill="rgba(227, 6, 19, 0.2)" stroke="#E30613" stroke-width="3"/>
+                        <path d="M38 50L46 58L62 42" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span class="font-display text-xl tracking-wider font-medium">DNS<span class="text-brand">MALIK</span></span>
+            </a>
+            <div class="hidden md:flex items-center gap-8">
+                <a href="/index.html#features" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">Features</a>
+                <a href="/index.html#stats" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">Stats</a>
+                <a href="/index.html#how-it-works" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">How It Works</a>
+                <a href="/index.html#setup" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">Setup</a>
+                <a href="/index.html#faq" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">FAQ</a>
+                <a href="/RealTime.html" id="loginBtn" class="text-sm tracking-wide uppercase text-brand hover:text-brand transition-colors duration-300 flex items-center gap-1.5 focus:outline-none font-semibold">
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand animate-ping mr-1"></span>
+                    <iconify-icon icon="lucide:log-in" width="16" class="align-middle"></iconify-icon> Visualizer
+                </a>
+                <a href="/index.html#setup" class="ml-4 px-6 py-2.5 bg-brand hover:bg-red-700 text-white text-sm tracking-widest uppercase font-medium transition-all duration-300 rounded-lg shadow-[0_0_15px_rgba(227,6,19,0.3)]">
+                    Get Started
+                </a>
+            </div>
+            <button id="menuBtn" class="md:hidden hamburger flex flex-col gap-[6px] p-2">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="md:hidden hidden glass-strong">
+            <div class="px-6 py-8 flex flex-col gap-4">
+                <a href="/index.html#features" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">Features</a>
+                <a href="/index.html#stats" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">Stats</a>
+                <a href="/index.html#how-it-works" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">How It Works</a>
+                <a href="/index.html#setup" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">Setup</a>
+                <a href="/index.html#faq" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">FAQ</a>
+                <a href="/RealTime.html" id="mobileLoginBtn" class="text-sm tracking-wide uppercase text-brand hover:text-brand text-left py-2 flex items-center gap-1.5 focus:outline-none">
+                    <iconify-icon icon="lucide:log-in" width="16" class="align-middle"></iconify-icon> Visualizer
+                </a>
+                <a href="/index.html#setup" class="mt-4 px-6 py-3 bg-brand text-white text-sm tracking-widest uppercase font-medium text-center rounded-lg mobile-link">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- SECTION: Real-Time Visualizer -->
+    <section class="relative min-h-screen py-32 px-6 z-10">
+        <div class="max-w-7xl mx-auto">
+
+            <!-- Header -->
+            <div class="text-center mb-16 reveal">
+                <span class="text-xs tracking-[0.3em] uppercase text-brand font-mono mb-4 block">Live Infrastructure</span>
+                <h2 class="font-display text-3xl md:text-5xl font-medium tracking-tight mb-4">Watch DNS Queries<br>Flow in Real Time</h2>
+                <p class="text-gray-500 font-light max-w-xl mx-auto leading-relaxed text-sm">See exactly how DNS MALIK processes, encrypts, filters, and resolves every query. No simulation — this is how it actually works.</p>
+            </div>
+
+            <!-- Interactive Domain Tester -->
+            <div class="max-w-2xl mx-auto mb-16 reveal">
+                <div class="glass rounded-2xl p-6 md:p-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <iconify-icon icon="lucide:search" width="16" class="text-brand"></iconify-icon>
+                        <span class="text-xs tracking-widest uppercase text-gray-400 font-mono">Test a Domain</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <input id="domainInput" type="text" placeholder="Enter any domain (e.g. google.com)" value="github.com"
+                            class="domain-input flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-3 font-mono text-sm text-white placeholder-gray-600 transition-all duration-300">
+                        <button id="resolveBtn" onclick="resolveDomain()"
+                            class="px-6 py-3 bg-brand hover:bg-red-700 text-white text-sm tracking-widest uppercase font-medium transition-all duration-300 rounded-lg shrink-0 flex items-center gap-2">
+                            <iconify-icon icon="lucide:play" width="14"></iconify-icon>
+                            Resolve
+                        </button>
+                    </div>
+                    <!-- Resolution result -->
+                    <div id="resolveResult" class="mt-4 hidden">
+                        <div class="bg-black/40 rounded-lg p-4 border border-white/5">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-mono text-xs text-gray-500">Resolution Path</span>
+                                <span id="resolveTime" class="font-mono text-xs text-brand"></span>
+                            </div>
+                            <div id="resolveSteps" class="space-y-1"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Visualization Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 reveal">
+
+                <!-- ROW 1: Query Flow (Full Width) -->
+                <div class="lg:col-span-12">
+                    <div class="glass rounded-2xl p-6 md:p-8 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                    <span class="text-xs tracking-widest uppercase text-gray-400 font-mono">Query Flow — Live</span>
+                                </div>
+                                <div class="hidden sm:flex items-center gap-4 text-[10px] font-mono text-gray-600">
+                                    <span><span class="inline-block w-2 h-2 rounded-full bg-brand mr-1"></span>Query</span>
+                                    <span><span class="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1"></span>Encrypted</span>
+                                    <span><span class="inline-block w-2 h-2 rounded-full bg-green-500 mr-1"></span>Resolved</span>
+                                    <span><span class="inline-block w-2 h-2 rounded-full bg-red-500 mr-1"></span>Blocked</span>
+                                </div>
+                            </div>
+
+                            <!-- Canvas Flow Diagram -->
+                            <div id="flowContainer" class="relative w-full" style="height: 480px;">
+                                <div class="scan-line"></div>
+                                <canvas id="flowCanvas" class="absolute inset-0 w-full h-full" style="z-index: 1;"></canvas>
+
+                                <!-- NODE: Your Device -->
+                                <div class="flow-node" id="node-device" style="left: 1.5%; top: 32%;">
+                                    <div class="node-card-inner" style="--node-glow:rgba(227,6,19,0.08); --node-color:rgba(227,6,19,0.5); --node-glow2:rgba(227,6,19,0.1); --node-color-rgb:#E30613;">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="node-led"></span>
+                                            <span class="text-[9px] tracking-[0.15em] uppercase text-gray-500 font-mono">Source</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 mb-1.5">
+                                            <iconify-icon icon="lucide:laptop" width="18" class="text-brand"></iconify-icon>
+                                            <span class="font-display text-sm tracking-wider uppercase font-medium">Your Device</span>
+                                        </div>
+                                        <div class="text-[9px] font-mono text-gray-600 mb-1">IP: <span id="deviceIP">Tester</span></div>
+                                        <div class="node-counter" id="nc-device">— qps</div>
+                                        <div class="node-payload mt-1" id="np-device">waiting...</div>
+                                    </div>
+                                </div>
+
+                                <!-- NODE: TLS Tunnel -->
+                                <div class="flow-node" id="node-tls" style="left: 23%; top: 12%;">
+                                    <div class="node-card-inner" style="--node-glow:rgba(59,130,246,0.08); --node-color:rgba(59,130,246,0.5); --node-glow2:rgba(59,130,246,0.1); --node-color-rgb:#3b82f6;">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="node-led" style="background:#3b82f6;"></span>
+                                            <span class="text-[9px] tracking-[0.15em] uppercase text-gray-500 font-mono">Encryption</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 mb-1.5">
+                                            <iconify-icon icon="lucide:lock-keyhole" width="18" class="text-blue-400"></iconify-icon>
+                                            <span class="font-display text-sm tracking-wider uppercase font-medium">TLS Tunnel</span>
+                                        </div>
+                                        <div class="text-[9px] font-mono text-gray-600 mb-1">TLS 1.3 · AES-256-GCM</div>
+                                        <div class="node-counter" id="nc-tls">— enc/s</div>
+                                        <div class="node-payload mt-1" id="np-tls">waiting...</div>
+                                    </div>
+                                </div>
+
+                                <!-- NODE: Ad Filter -->
+                                <div class="flow-node" id="node-filter" style="left: 47%; top: 32%;">
+                                    <div class="node-card-inner" style="--node-glow:rgba(245,158,11,0.08); --node-color:rgba(245,158,11,0.5); --node-glow2:rgba(245,158,11,0.1); --node-color-rgb:#f59e0b;">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="node-led" style="background:#f59e0b;"></span>
+                                            <span class="text-[9px] tracking-[0.15em] uppercase text-gray-500 font-mono">Filter</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 mb-1.5">
+                                            <iconify-icon icon="lucide:shield-alert" width="18" class="text-amber-400"></iconify-icon>
+                                            <span class="font-display text-sm tracking-wider uppercase font-medium">Ad Filter</span>
+                                        </div>
+                                        <div class="text-[9px] font-mono text-gray-600 mb-1">2.1M blocklists · <span id="filterListUpdate">0s ago</span></div>
+                                        <div class="node-counter" id="nc-filter">— blk/s</div>
+                                        <div class="node-payload mt-1" id="np-filter">waiting...</div>
+                                    </div>
+                                </div>
+
+                                <!-- NODE: Resolver -->
+                                <div class="flow-node" id="node-resolver" style="left: 73%; top: 8%;">
+                                    <div class="node-card-inner" style="--node-glow:rgba(16,185,129,0.08); --node-color:rgba(16,185,129,0.5); --node-glow2:rgba(16,185,129,0.1); --node-color-rgb:#10b981;">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="node-led" style="background:#10b981;"></span>
+                                            <span class="text-[9px] tracking-[0.15em] uppercase text-gray-500 font-mono">Resolution</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 mb-1.5">
+                                            <iconify-icon icon="lucide:globe" width="18" class="text-emerald-400"></iconify-icon>
+                                            <span class="font-display text-sm tracking-wider uppercase font-medium">Resolver</span>
+                                        </div>
+                                        <div class="text-[9px] font-mono text-gray-600 mb-1">Anycast · <span id="resolverLatency">2.4</span>ms avg</div>
+                                        <div class="node-counter" id="nc-resolver">— rsl/s</div>
+                                        <div class="node-payload mt-1" id="np-resolver">waiting...</div>
+                                    </div>
+                                </div>
+
+                                <!-- NODE: Blocked -->
+                                <div class="flow-node" id="node-blocked" style="left: 73%; top: 66%;">
+                                    <div class="node-card-inner" style="--node-glow:rgba(239,68,68,0.08); --node-color:rgba(239,68,68,0.5); --node-glow2:rgba(239,68,68,0.1); --node-color-rgb:#ef4444;">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="node-led" style="background:#ef4444;"></span>
+                                            <span class="text-[9px] tracking-[0.15em] uppercase text-gray-500 font-mono">Blocked</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 mb-1.5">
+                                            <iconify-icon icon="lucide:ban" width="18" class="text-red-400"></iconify-icon>
+                                            <span class="font-display text-sm tracking-wider uppercase font-medium">Blocked</span>
+                                        </div>
+                                        <div class="text-[9px] font-mono text-gray-600 mb-1">Return → 0.0.0.0</div>
+                                        <div class="node-counter" id="nc-blocked">— blk/s</div>
+                                        <div class="node-payload mt-1" id="np-blocked">waiting...</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Counters -->
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-5 pt-5 border-t border-white/5">
+                                <div class="text-center">
+                                    <div class="font-mono text-xl md:text-2xl text-brand" id="counterQueries">0</div>
+                                    <div class="text-[9px] text-gray-600 tracking-widest uppercase mt-1 font-mono">Queries Today</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="font-mono text-xl md:text-2xl text-blue-400" id="counterEncrypted">0</div>
+                                    <div class="text-[9px] text-gray-600 tracking-widest uppercase mt-1 font-mono">Encrypted Today</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="font-mono text-xl md:text-2xl text-amber-400" id="counterBlocked">0</div>
+                                    <div class="text-[9px] text-gray-600 tracking-widest uppercase mt-1 font-mono">Blocked Today</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="font-mono text-xl md:text-2xl text-emerald-400" id="counterResolved">0</div>
+                                    <div class="text-[9px] text-gray-600 tracking-widest uppercase mt-1 font-mono">Resolved Today</div>
+                                </div>
+                                <div class="text-center col-span-2 md:col-span-1">
+                                    <div class="font-mono text-xl md:text-2xl text-cyan-400" id="counterCached">0</div>
+                                    <div class="text-[9px] text-gray-600 tracking-widest uppercase mt-1 font-mono">Cached Today</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROW 2: Live Terminal + Query Volume Chart -->
+                <!-- Live Terminal -->
+                <div class="lg:col-span-6 glass rounded-2xl overflow-hidden flex flex-col">
+                    <!-- Terminal header -->
+                    <div class="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-black/30">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-red-500/80"></span>
+                            <span class="w-3 h-3 rounded-full bg-yellow-500/80"></span>
+                            <span class="w-3 h-3 rounded-full bg-green-500/80"></span>
+                            <span class="text-xs font-mono text-gray-400 ml-2">live_query_stream.log</span>
+                        </div>
+                        
+                        <!-- Toggle Mode -->
+                        <div class="flex items-center gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <span class="text-[9px] tracking-wider font-mono text-gray-500 uppercase">Live Log</span>
+                                <div class="relative">
+                                    <input type="checkbox" id="liveModeToggle" class="sr-only" checked>
+                                    <div class="w-8 h-4 bg-brand/30 border border-brand/50 rounded-full transition-colors duration-300" id="toggleBg"></div>
+                                    <div class="absolute left-0.5 top-0.5 w-3 h-3 bg-brand rounded-full transition-transform duration-300 translate-x-4" id="toggleDot"></div>
+                                </div>
+                            </label>
+                            <button onclick="clearTerminal()" class="text-gray-600 hover:text-brand transition-colors">
+                                <iconify-icon icon="lucide:trash-2" width="14"></iconify-icon>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Terminal body -->
+                    <div id="terminalBody" class="p-4 font-mono text-xs leading-relaxed overflow-y-auto flex-1" style="max-height: 420px; min-height: 350px;">
+                    </div>
+                </div>
+
+                <!-- Bandwidth Chart Card -->
+                <div class="lg:col-span-6 glass rounded-2xl p-6 md:p-8 flex flex-col justify-between" style="min-height: 420px;">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <iconify-icon icon="lucide:activity" width="16" class="text-brand"></iconify-icon>
+                            <span class="text-xs tracking-widest uppercase text-gray-400 font-mono">Query Volume — Last 60 Seconds</span>
+                        </div>
+                        <div class="flex items-center gap-4 text-[10px] font-mono text-gray-600">
+                            <span><span class="inline-block w-2 h-2 rounded-full bg-brand mr-1"></span>Total</span>
+                            <span><span class="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></span>Blocked</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center">
+                        <canvas id="bandwidthChart" class="w-full h-[280px]" height="280"></canvas>
+                    </div>
+                </div>
+
+                <!-- ROW 3: Stats Grid + Top Blocked Domains -->
+                <!-- Real-time Stats Sub-grid -->
+                <div class="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <!-- Connections -->
+                    <div class="glass rounded-xl p-4 flex flex-col justify-between">
+                        <div class="flex items-center gap-2 mb-3">
+                            <iconify-icon icon="lucide:shield-check" width="14" class="text-brand"></iconify-icon>
+                            <span class="text-[10px] tracking-widest uppercase text-gray-500">Connections</span>
+                        </div>
+                        <div class="font-display text-3xl font-medium text-brand" id="statTLS">0</div>
+                        <div class="flex items-center gap-1 mt-1">
+                            <iconify-icon icon="lucide:trending-up" width="12" class="text-green-400"></iconify-icon>
+                            <span class="text-[9px] text-green-400 font-mono">online</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Blocked Today -->
+                    <div class="glass rounded-xl p-4 flex flex-col justify-between">
+                        <div class="flex items-center gap-2 mb-3">
+                            <iconify-icon icon="lucide:ban" width="14" class="text-amber-400"></iconify-icon>
+                            <span class="text-[10px] tracking-widest uppercase text-gray-500">Blocked Today</span>
+                        </div>
+                        <div class="font-display text-3xl font-medium text-amber-400" id="statBlocked">0</div>
+                        <div class="flex items-center gap-1 mt-1">
+                            <iconify-icon icon="lucide:shield" width="12" class="text-green-400"></iconify-icon>
+                            <span class="text-[9px] text-green-400 font-mono">active protection</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Avg Latency -->
+                    <div class="glass rounded-xl p-4 flex flex-col justify-between">
+                        <div class="flex items-center gap-2 mb-3">
+                            <iconify-icon icon="lucide:zap" width="14" class="text-emerald-400"></iconify-icon>
+                            <span class="text-[10px] tracking-widest uppercase text-gray-500">Avg Latency</span>
+                        </div>
+                        <div class="font-display text-3xl font-medium text-emerald-400" id="statLatency">0.0<span class="text-lg">ms</span></div>
+                        <div class="flex items-center gap-1 mt-1">
+                            <iconify-icon icon="lucide:minus" width="12" class="text-gray-500"></iconify-icon>
+                            <span class="text-[9px] text-gray-500 font-mono">stable</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Cache Hit -->
+                    <div class="glass rounded-xl p-4 flex flex-col justify-between">
+                        <div class="flex items-center gap-2 mb-3">
+                            <iconify-icon icon="lucide:globe" width="14" class="text-blue-400"></iconify-icon>
+                            <span class="text-[10px] tracking-widest uppercase text-gray-500">Cache Hit</span>
+                        </div>
+                        <div class="font-display text-3xl font-medium text-blue-400" id="statCache">0<span class="text-lg">%</span></div>
+                        <div class="flex items-center gap-1 mt-1">
+                            <iconify-icon icon="lucide:trending-up" width="12" class="text-green-400"></iconify-icon>
+                            <span class="text-[9px] text-green-400 font-mono">optimized cache</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Blocked Domains -->
+                <div class="lg:col-span-4 glass rounded-2xl p-5">
+                    <div class="flex items-center gap-2 mb-4">
+                        <iconify-icon icon="lucide:shield-alert" width="14" class="text-red-400"></iconify-icon>
+                        <span class="text-[10px] tracking-widest uppercase text-gray-500 font-mono">Top Blocked (Live)</span>
+                    </div>
+                    <div class="space-y-2" id="topBlocked">
+                        <div class="text-[10px] text-gray-500 font-mono text-center py-4">No blocked domains recorded today</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="relative z-10 border-t border-white/5 py-16 px-6 bg-dark">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-lg animated-gradient flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M50 8L15 23V53C15 75.5 35 91.5 50 95C65 91.5 85 75.5 85 53V23L50 8Z" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M50 18L25 29V53C25 69.5 40 81.5 50 84C60 81.5 75 69.5 75 53V29L50 18Z" fill="rgba(227, 6, 19, 0.2)" stroke="#E30613" stroke-width="3"/>
+                                <path d="M38 50L46 58L62 42" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <span class="font-display text-xl tracking-wider font-medium">DNS<span class="text-brand">MALIK</span></span>
+                    </div>
+                    <p class="text-gray-500 font-light leading-relaxed max-w-md text-sm">Next-generation secure private DNS portal. Military-grade encryption, ad blocking, and universal network defense — all completely free.</p>
+                </div>
+                <div>
+                    <h4 class="font-display text-sm tracking-widest uppercase text-gray-400 mb-4">Quick Links</h4>
+                    <ul class="space-y-2">
+                        <li><a href="/index.html#features" class="text-sm text-gray-500 hover:text-brand transition-colors">Features</a></li>
+                        <li><a href="/index.html#stats" class="text-sm text-gray-500 hover:text-brand transition-colors">Statistics</a></li>
+                        <li><a href="/index.html#how-it-works" class="text-sm text-gray-500 hover:text-brand transition-colors">How It Works</a></li>
+                        <li><a href="/index.html#setup" class="text-sm text-gray-500 hover:text-brand transition-colors">Setup Guide</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-display text-sm tracking-widest uppercase text-gray-400 mb-4">Resources</h4>
+                    <ul class="space-y-2">
+                        <li><a href="/faq.html" class="text-sm text-gray-500 hover:text-brand transition-colors">FAQ</a></li>
+                        <li><a href="/privacy.html" class="text-sm text-gray-500 hover:text-brand transition-colors">Privacy Policy</a></li>
+                        <li><a href="/status.html" class="text-sm text-gray-500 hover:text-brand transition-colors">Status Page</a></li>
+                        <li><a href="/contact.html" class="text-sm text-gray-500 hover:text-brand transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-xs text-gray-600 tracking-wide">&copy; 2026 DNS MALIK. All rights reserved. Your privacy is our priority.</p>
+                <div class="flex items-center gap-4">
+                    <a href="#" class="w-9 h-9 rounded-lg bg-white/5 hover:bg-brand/20 flex items-center justify-center transition-colors duration-300">
+                        <iconify-icon icon="lucide:github" width="16" class="text-gray-500 hover:text-brand"></iconify-icon>
+                    </a>
+                    <a href="#" class="w-9 h-9 rounded-lg bg-white/5 hover:bg-brand/20 flex items-center justify-center transition-colors duration-300">
+                        <iconify-icon icon="lucide:twitter" width="16" class="text-gray-500 hover:text-brand"></iconify-icon>
+                    </a>
+                    <a href="#" class="w-9 h-9 rounded-lg bg-white/5 hover:bg-brand/20 flex items-center justify-center transition-colors duration-300">
+                        <iconify-icon icon="lucide:message-circle" width="16" class="text-gray-500 hover:text-brand"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast -->
+    <div id="toast" class="toast glass-strong rounded-xl px-6 py-4 flex items-center gap-3">
+        <iconify-icon icon="lucide:check-circle" width="20" class="text-green-400"></iconify-icon>
+        <span class="text-sm" id="toastMsg"></span>
+    </div>
+
+    <script>
+    // ==================== PARTICLES BACKGROUND ====================
+    const particleCanvas = document.getElementById('particles-canvas');
+    const pCtx = particleCanvas.getContext('2d');
+    let particles = [];
+    const PARTICLE_COUNT = 40;
+
+    function resizeParticleCanvas() {
+        particleCanvas.width = window.innerWidth;
+        particleCanvas.height = window.innerHeight;
+    }
+    resizeParticleCanvas();
+    window.addEventListener('resize', resizeParticleCanvas);
+
+    class Particle {
+        constructor() {
+            this.reset();
+        }
+        reset() {
+            this.x = Math.random() * particleCanvas.width;
+            this.y = Math.random() * particleCanvas.height;
+            this.size = Math.random() * 1.5 + 0.5;
+            this.speedX = Math.random() * 0.3 - 0.15;
+            this.speedY = Math.random() * 0.3 - 0.15;
+            this.opacity = Math.random() * 0.4 + 0.1;
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            if (this.x < 0 || this.x > particleCanvas.width || this.y < 0 || this.y > particleCanvas.height) {
+                this.reset();
+            }
+        }
+        draw() {
+            pCtx.fillStyle = `rgba(227, 6, 19, ${this.opacity})`;
+            pCtx.beginPath();
+            pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            pCtx.fill();
+        }
+    }
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push(new Particle());
+    }
+
+    function animateParticles() {
+        pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+        particles.forEach(p => {
+            p.update();
+            p.draw();
+        });
+        requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    // ==================== NAVBAR SCROLL ====================
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 80) {
+            navbar.classList.add('glass-strong');
+        } else {
+            navbar.classList.remove('glass-strong');
+        }
+    });
+
+    // ==================== MOBILE MENU ====================
+    const menuBtn = document.getElementById('menuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    menuBtn.addEventListener('click', () => {
+        menuBtn.classList.toggle('open');
+        mobileMenu.classList.toggle('hidden');
+    });
+    document.querySelectorAll('.mobile-link').forEach(link => {
+        link.addEventListener('click', () => {
+            menuBtn.classList.remove('open');
+            mobileMenu.classList.add('hidden');
+        });
+    });
+
+    // ==================== DATA FOR SIMULATIONFallback ====================
+    const cleanDomains = [
+        'google.com', 'github.com', 'stackoverflow.com', 'wikipedia.org', 'cloudflare.com',
+        'amazonaws.com', 'microsoft.com', 'apple.com', 'youtube.com', 'reddit.com',
+        'netflix.com', 'spotify.com', 'twitter.com', 'linkedin.com', 'notion.so',
+        'figma.com', 'vercel.app', 'docker.com', 'npmjs.com', 'openai.com'
+    ];
+    const trackerDomains = [
+        'doubleclick.net', 'googlesyndication.com', 'facebook.net', 'analytics.google.com',
+        'hotjar.com', 'mixpanel.com', 'segment.io', 'adservice.google.com',
+        'amazon-adsystem.com', 'ads.twitter.com', 'tracking.hubspot.com',
+        'pixel.facebook.com', 'ct.pinterest.com', 'bat.bing.com',
+        'googleadservices.com', 'adnxs.com', 'adsrvr.org', 'rubiconproject.com'
+    ];
+    const malwareDomains = [
+        'malware-test.com', 'phishing-login.secure.bank.update.xyz',
+        'free-prize-winner.tk', 'crypto-miner-inject.net',
+        'fake-bank-secure.login.ddns.net', 'trojan-download.ru'
+    ];
+
+    const dnsTypes = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SRV'];
+    const ips = ['104.26.', '172.67.', '151.101.', '140.82.', '185.199.', '199.232.'];
+
+    // ==================== TERMINAL ====================
+    const termBody = document.getElementById('terminalBody');
+    let lineCount = 0;
+    const MAX_LINES = 200;
+
+    function getTimestamp() {
+        const now = new Date();
+        return now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+    }
+
+    function formatISOToTime(isoStr) {
+        try {
+            const d = new Date(isoStr);
+            return d.toTimeString().split(' ')[0] + '.' + String(d.getMilliseconds()).padStart(3, '0');
+        } catch(e) {
+            return getTimestamp();
+        }
+    }
+
+    function randomIP() {
+        return ips[Math.floor(Math.random() * ips.length)] + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255);
+    }
+
+    function addTerminalLine(type, domain, extra = {}) {
+        const ts = `<span class="text-gray-600">${getTimestamp()}</span>`;
+        let line = '';
+
+        if (type === 'query') {
+            const dnsType = extra.dnsType || 'A';
+            const src = extra.src || '192.168.1.' + Math.floor(Math.random() * 254 + 1);
+            line = `${ts} <span class="text-blue-400">QRY</span> <span class="text-gray-500">${src}</span> → <span class="text-white">${domain}</span> <span class="text-gray-600">${dnsType}</span>`;
+        } else if (type === 'encrypted') {
+            line = `${ts} <span class="text-indigo-400">TLS</span> <span class="text-gray-500">↳ Encrypting query</span> <span class="text-indigo-400">AES-256-GCM</span> <span class="text-gray-600">${domain}</span>`;
+        } else if (type === 'blocked') {
+            const reason = extra.reason || 'ad-tracker';
+            const rColor = reason === 'malware' ? 'text-red-500' : 'text-amber-400';
+            line = `${ts} <span class="${rColor}">BLK</span> <span class="text-gray-500">↳ ${domain}</span> <span class="${rColor}">→ 0.0.0.0</span> <span class="text-gray-600">[${reason}]</span>`;
+        } else if (type === 'resolved') {
+            const ip = extra.ip || randomIP();
+            const latency = extra.latency || (Math.random() * 3 + 1).toFixed(1);
+            line = `${ts} <span class="text-emerald-400">RSL</span> <span class="text-gray-500">↳ ${domain}</span> <span class="text-emerald-400">→ ${ip}</span> <span class="text-gray-600">${latency}ms</span>`;
+        } else if (type === 'cache') {
+            line = `${ts} <span class="text-cyan-400">CAH</span> <span class="text-gray-500">↳ Cache hit</span> <span class="text-cyan-400">${domain}</span> <span class="text-gray-600">0.1ms</span>`;
+        }
+
+        const div = document.createElement('div');
+        div.className = 'terminal-line py-0.5';
+        div.innerHTML = line;
+        termBody.appendChild(div);
+        lineCount++;
+
+        if (lineCount > MAX_LINES) {
+            termBody.removeChild(termBody.firstChild);
+        }
+
+        termBody.scrollTop = termBody.scrollHeight;
+    }
+
+    function addTerminalLineDirect(q) {
+        const ts = `<span class="text-gray-600">${formatISOToTime(q.time)}</span>`;
+        const src = q.client || '10.66.66.x';
+        const qryLine = `${ts} <span class="text-blue-400">QRY</span> <span class="text-gray-500">${src}</span> → <span class="text-white">${q.domain}</span> <span class="text-gray-600">${q.dns_type}</span>`;
+        
+        let outcomeLine = '';
+        if (q.is_blocked) {
+            const rColor = q.block_reason === 'malware' ? 'text-red-500' : 'text-amber-400';
+            outcomeLine = `<span class="text-gray-600">${formatISOToTime(q.time)}</span> <span class="${rColor}">BLK</span> <span class="text-gray-500">↳ ${q.domain}</span> <span class="${rColor}">→ 0.0.0.0</span> <span class="text-gray-600">[${q.block_reason}]</span>`;
+        } else if (q.cached) {
+            outcomeLine = `<span class="text-gray-600">${formatISOToTime(q.time)}</span> <span class="text-cyan-400">CAH</span> <span class="text-gray-500">↳ Cache hit</span> <span class="text-cyan-400">${q.domain}</span> <span class="text-gray-600">0.1ms</span>`;
+        } else {
+            const latency = q.elapsed_ms.toFixed(1);
+            outcomeLine = `<span class="text-gray-600">${formatISOToTime(q.time)}</span> <span class="text-emerald-400">RSL</span> <span class="text-gray-500">↳ ${q.domain}</span> <span class="text-emerald-400">→ ${q.answer_ip || 'NXDOMAIN'}</span> <span class="text-gray-600">${latency}ms</span>`;
+        }
+        
+        const divQ = document.createElement('div');
+        divQ.className = 'py-0.5';
+        divQ.innerHTML = qryLine;
+        termBody.appendChild(divQ);
+        
+        const divO = document.createElement('div');
+        divO.className = 'py-0.5';
+        divO.innerHTML = outcomeLine;
+        termBody.appendChild(divO);
+        
+        lineCount += 2;
+        if (lineCount > MAX_LINES) {
+            while (termBody.childNodes.length > MAX_LINES) {
+                termBody.removeChild(termBody.firstChild);
+            }
+        }
+        termBody.scrollTop = termBody.scrollHeight;
+    }
+
+    function clearTerminal() {
+        termBody.innerHTML = '';
+        lineCount = 0;
+    }
+
+    // ==================== FLOW & QUEUE STATE ====================
+    let liveMode = true;
+    let lastProcessedTime = null;
+    let queryQueue = [];
+    let processedQueryHistory = [];
+    let simInterval = null;
+
+    // Cumulative counters for real-time display
+    let totalQueriesCount = 0;
+    let totalEncryptedCount = 0;
+    let totalBlockedCount = 0;
+    let totalResolvedCount = 0;
+    let totalCachedCount = 0;
+    let statsInitialized = false;
+
+    // Pre-populate terminal from querylog on load
+    function initLiveQueries() {
+        fetch('/api/stats?action=querylog')
+            .then(res => res.json())
+            .then(data => {
+                const queries = data.queries || [];
+                if (queries.length > 0) {
+                    queries.sort((a, b) => new Date(a.time) - new Date(b.time));
+                    const initialBatch = queries.slice(-15);
+                    initialBatch.forEach(q => addTerminalLineDirect(q));
+                    lastProcessedTime = queries[queries.length - 1].time;
+                    initChartHistory(queries);
+                } else {
+                    lastProcessedTime = new Date().toISOString();
+                }
+            })
+            .catch(err => {
+                console.error("Failed to load initial queries:", err);
+                lastProcessedTime = new Date().toISOString();
+            });
+    }
+
+    // Initialize 60-seconds chart history based on rolling averages of the query log
+    function initChartHistory(queries) {
+        const now = Date.now();
+        bwTotal = [];
+        bwBlocked = [];
+        
+        for (let i = 59; i >= 0; i--) {
+            const targetTime = now - i * 1000;
+            const windowStart = targetTime - 10000; // 10-second rolling window
+            
+            let totalInWindow = 0;
+            let blockedInWindow = 0;
+            
+            queries.forEach(q => {
+                const qTime = new Date(q.time).getTime();
+                if (qTime >= windowStart && qTime < targetTime) {
+                    totalInWindow++;
+                    if (q.is_blocked) {
+                        blockedInWindow++;
+                    }
+                }
+            });
+            
+            bwTotal.push(totalInWindow / 10.0);
+            bwBlocked.push(blockedInWindow / 10.0);
+        }
+        drawBWChart();
+    }
+
+    function pollLiveQueries() {
+        if (!liveMode) return;
+        fetch('/api/stats?action=querylog')
+            .then(res => res.json())
+            .then(data => {
+                const queries = data.queries || [];
+                if (queries.length === 0) return;
+                queries.sort((a, b) => new Date(a.time) - new Date(b.time));
+                
+                let newQueries = [];
+                if (!lastProcessedTime) {
+                    newQueries = queries;
+                } else {
+                    newQueries = queries.filter(q => new Date(q.time) > new Date(lastProcessedTime));
+                }
+                
+                if (newQueries.length > 0) {
+                    newQueries.forEach(q => queryQueue.push(q));
+                    lastProcessedTime = newQueries[newQueries.length - 1].time;
+                }
+            })
+            .catch(err => console.error("Querylog poll error:", err));
+    }
+
+    // ==================== CANVAS FLOW SYSTEM ====================
+    const flowContainer = document.getElementById('flowContainer');
+    const flowCanvas = document.getElementById('flowCanvas');
+    const fCtx = flowCanvas.getContext('2d');
+    let canvasW, canvasH, dpr;
+    let flowPaths = [];
+
+    function resizeFlowCanvas(){
+        dpr = Math.min(window.devicePixelRatio, 2);
+        const rect = flowContainer.getBoundingClientRect();
+        canvasW = rect.width * dpr;
+        canvasH = rect.height * dpr;
+        flowCanvas.width = canvasW;
+        flowCanvas.height = canvasH;
+        flowCanvas.style.width = rect.width + 'px';
+        flowCanvas.style.height = rect.height + 'px';
+        fCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        calculatePaths();
+    }
+
+    function getNodeCenter(id, side){
+        const el = document.getElementById(id);
+        if(!el) return {x:0, y:0};
+        const cr = flowContainer.getBoundingClientRect();
+        const nr = el.getBoundingClientRect();
+        const x = nr.left - cr.left;
+        const y = nr.top - cr.top;
+        const w = nr.width;
+        const h = nr.height;
+        if(side==='right') return {x:x+w, y:y+h/2};
+        if(side==='left') return {x:x, y:y+h/2};
+        if(side==='top') return {x:x+w/2, y:y};
+        if(side==='bottom') return {x:x+w/2, y:y+h};
+        return {x:x+w/2, y:y+h/2};
+    }
+
+    function bezierPoint(t, p0, p1, p2, p3){
+        const mt=1-t, mt2=mt*mt, mt3=mt2*mt, t2=t*t, t3=t2*t;
+        return { x: mt3*p0.x+3*mt2*t*p1.x+3*mt*t2*p2.x+t3*p3.x, y: mt3*p0.y+3*mt2*t*p1.y+3*mt*t2*p2.y+t3*p3.y };
+    }
+
+    function calculatePaths(){
+        const dR = getNodeCenter('node-device','right');
+        const tL = getNodeCenter('node-tls','left');
+        const tR = getNodeCenter('node-tls','right');
+        const fL = getNodeCenter('node-filter','left');
+        const fR = getNodeCenter('node-filter','right');
+        const fB = getNodeCenter('node-filter','bottom');
+        const rL = getNodeCenter('node-resolver','left');
+        const rB = getNodeCenter('node-resolver','bottom');
+        const dBot = getNodeCenter('node-device','bottom');
+        const bT = getNodeCenter('node-blocked','top');
+
+        const mx1 = (dR.x+tL.x)/2, mx2 = (tR.x+fL.x)/2, mx3 = (fR.x+rL.x)/2, mx4 = (fB.x+bT.x)/2;
+        const contH = canvasH / dpr;
+
+        flowPaths = [
+            { id:'device-tls', p0:dR, p1:{x:mx1,y:dR.y-30}, p2:{x:mx1,y:tL.y+30}, p3:tL, color:'rgba(227,6,19,', baseColor:'#E30613' },
+            { id:'tls-filter', p0:tR, p1:{x:mx2,y:tR.y+30}, p2:{x:mx2,y:fL.y-30}, p3:fL, color:'rgba(59,130,246,', baseColor:'#3b82f6' },
+            { id:'filter-resolver', p0:fR, p1:{x:mx3,y:fR.y-40}, p2:{x:mx3,y:rL.y+40}, p3:rL, color:'rgba(16,185,129,', baseColor:'#10b981' },
+            { id:'filter-blocked', p0:fB, p1:{x:mx4+30,y:fB.y+40}, p2:{x:mx4+30,y:bT.y-40}, p3:bT, color:'rgba(239,68,68,', baseColor:'#ef4444' },
+            { id:'resolver-device', p0:rB, p1:{x:rB.x,y:contH-20}, p2:{x:dBot.x,y:contH-20}, p3:dBot, color:'rgba(16,185,129,', baseColor:'#10b981', dashed:true },
+        ];
+    }
+
+    // ==================== PARTICLE SYSTEM ====================
+    let flowParticles = [];
+    const MAX_PARTICLES = 80;
+
+    class FlowParticle {
+        constructor(pathIndex, color, speed){
+            this.pathIndex = pathIndex;
+            this.path = flowPaths[pathIndex];
+            this.color = color || this.path.baseColor;
+            this.colorBase = this.path.color;
+            this.progress = 0;
+            this.speed = speed || (0.003 + Math.random()*0.004);
+            this.trail = [];
+            this.trailMax = 14;
+            this.size = 2.5 + Math.random()*1.5;
+            this.alive = true;
+            this.opacity = 1;
+        }
+        update(){
+            this.progress += this.speed;
+            if(this.progress >= 1){ this.alive = false; return; }
+            const pos = bezierPoint(this.progress, this.path.p0, this.path.p1, this.path.p2, this.path.p3);
+            this.trail.unshift({x:pos.x, y:pos.y});
+            if(this.trail.length > this.trailMax) this.trail.pop();
+            if(this.progress < 0.05) this.opacity = this.progress / 0.05;
+            else if(this.progress > 0.92) this.opacity = (1 - this.progress) / 0.08;
+            else this.opacity = 1;
+        }
+        draw(ctx){
+            for(let i=1; i<this.trail.length; i++){
+                const alpha = (1 - i/this.trail.length) * 0.5 * this.opacity;
+                const sz = this.size * (1 - i/this.trail.length * 0.6);
+                ctx.beginPath();
+                ctx.arc(this.trail[i].x, this.trail[i].y, sz, 0, Math.PI*2);
+                ctx.fillStyle = this.colorBase + alpha + ')';
+                ctx.fill();
+            }
+            if(this.trail.length > 0){
+                const p = this.trail[0];
+                ctx.beginPath(); ctx.arc(p.x, p.y, this.size + 5, 0, Math.PI*2);
+                ctx.fillStyle = this.colorBase + (0.12 * this.opacity) + ')'; ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, this.size + 2, 0, Math.PI*2);
+                ctx.fillStyle = this.colorBase + (0.35 * this.opacity) + ')'; ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, this.size, 0, Math.PI*2);
+                ctx.fillStyle = this.colorBase + (0.9 * this.opacity) + ')'; ctx.fill();
+            }
+        }
+    }
+
+    function spawnParticle(pathIndex, color, speed){
+        if(flowParticles.length < MAX_PARTICLES && flowPaths[pathIndex]) flowParticles.push(new FlowParticle(pathIndex, color, speed));
+    }
+
+    let dashOffset = 0;
+    function drawPaths(){
+        dashOffset -= 0.5;
+        flowPaths.forEach(path => {
+            fCtx.beginPath();
+            fCtx.moveTo(path.p0.x, path.p0.y);
+            fCtx.bezierCurveTo(path.p1.x, path.p1.y, path.p2.x, path.p2.y, path.p3.x, path.p3.y);
+            fCtx.strokeStyle = path.color + '0.03)'; fCtx.lineWidth = 8; fCtx.setLineDash([]); fCtx.stroke();
+            fCtx.beginPath();
+            fCtx.moveTo(path.p0.x, path.p0.y);
+            fCtx.bezierCurveTo(path.p1.x, path.p1.y, path.p2.x, path.p2.y, path.p3.x, path.p3.y);
+            fCtx.strokeStyle = path.color + '0.12)'; fCtx.lineWidth = 1.5; fCtx.setLineDash(path.dashed ? [4,6] : []); fCtx.lineDashOffset = dashOffset; fCtx.stroke();
+            fCtx.setLineDash([]);
+        });
+    }
+
+    function drawGrid(){
+        const w = canvasW / dpr, h = canvasH / dpr;
+        fCtx.strokeStyle = 'rgba(255,255,255,0.015)'; fCtx.lineWidth = 0.5;
+        for(let x=0; x<w; x+=40){ fCtx.beginPath(); fCtx.moveTo(x,0); fCtx.lineTo(x,h); fCtx.stroke(); }
+        for(let y=0; y<h; y+=40){ fCtx.beginPath(); fCtx.moveTo(0,y); fCtx.lineTo(w,y); fCtx.stroke(); }
+    }
+
+    function animateFlow(){
+        if(flowPaths.length === 0) calculatePaths();
+        const w = canvasW / dpr, h = canvasH / dpr;
+        fCtx.clearRect(0, 0, w, h);
+        drawGrid(); drawPaths();
+        flowParticles.forEach(p => { p.update(); p.draw(fCtx); });
+        flowParticles = flowParticles.filter(p => p.alive);
+        requestAnimationFrame(animateFlow);
+    }
+
+    function pulseNode(nodeId){
+        const el = document.getElementById('node-' + nodeId);
+        if(!el) return;
+        el.classList.add('node-pulse');
+        setTimeout(() => el.classList.remove('node-pulse'), 600);
+    }
+
+    function updateNodePayload(nodeId, text){
+        const el = document.getElementById('np-' + nodeId);
+        if(el){ el.textContent = text; el.classList.add('active'); setTimeout(()=>el.classList.remove('active'), 1500); }
+    }
+
+    function animateQuery(q) {
+        const queryMode = liveMode;
+
+        // Step 1: Plaintext query from Client Device to TLS tunnel
+        addTerminalLine('query', q.domain, { dnsType: q.dns_type, src: q.client });
+        recordRollingEvent('query');
+        
+        pulseNode('device');
+        document.getElementById('deviceIP').textContent = q.client;
+        updateNodePayload('device', q.domain + ' → ?');
+        spawnParticle(0, '#E30613');
+
+        // Instantly increment Queries count in real-time
+        totalQueriesCount++;
+        document.getElementById('counterQueries').textContent = totalQueriesCount.toLocaleString();
+
+        // Step 2: Encrypted query from TLS tunnel to Ad Filter
+        setTimeout(() => {
+            if (liveMode !== queryMode) return;
+            pulseNode('tls');
+            const proto = q.client_proto ? q.client_proto.toUpperCase() : 'DoT';
+            updateNodePayload('tls', proto);
+            recordRollingEvent('encrypted');
+            spawnParticle(1, '#3b82f6');
+
+            // Instantly increment Encrypted count in real-time
+            totalEncryptedCount++;
+            document.getElementById('counterEncrypted').textContent = totalEncryptedCount.toLocaleString();
+        }, 250);
+
+        // Step 3: Outcomes
+        setTimeout(() => {
+            if (liveMode !== queryMode) return;
+            pulseNode('filter');
+            if (q.is_blocked) {
+                addTerminalLine('blocked', q.domain, { reason: q.block_reason });
+                recordRollingEvent('blocked');
+                updateNodePayload('filter', '✗ BLOCKED');
+                spawnParticle(3, '#ef4444', 0.005 + Math.random()*0.003);
+                
+                // Instantly increment Blocked count in real-time
+                totalBlockedCount++;
+                document.getElementById('counterBlocked').textContent = totalBlockedCount.toLocaleString();
+
+                setTimeout(() => {
+                    if (liveMode !== queryMode) return;
+                    pulseNode('blocked');
+                    updateNodePayload('blocked', q.domain + ' → 0.0.0.0');
+                }, 150);
+            } else {
+                if (q.cached) {
+                    addTerminalLine('cache', q.domain);
+                } else {
+                    addTerminalLine('resolved', q.domain, { ip: q.answer_ip, latency: q.elapsed_ms.toFixed(1) });
+                }
+                recordRollingEvent('resolved');
+                updateNodePayload('filter', '✓ CLEAN');
+                
+                if (q.cached) {
+                    recordRollingEvent('cache'); // For cache hit tracking
+                    spawnParticle(4, '#10b981', 0.002 + Math.random()*0.002);
+                    
+                    // Instantly increment Cache Hits count in real-time
+                    totalCachedCount++;
+                    document.getElementById('counterCached').textContent = totalCachedCount.toLocaleString();
+
+                    setTimeout(() => {
+                        if (liveMode !== queryMode) return;
+                        pulseNode('device');
+                        updateNodePayload('device', q.domain + ' → [Cache]');
+                    }, 500);
+                } else {
+                    spawnParticle(2, '#10b981');
+                    
+                    // Instantly increment Resolved count in real-time
+                    totalResolvedCount++;
+                    document.getElementById('counterResolved').textContent = totalResolvedCount.toLocaleString();
+
+                    setTimeout(() => {
+                        if (liveMode !== queryMode) return;
+                        pulseNode('resolver');
+                        updateNodePayload('resolver', q.answer_ip || 'Resolved');
+                        spawnParticle(4, '#10b981', 0.002 + Math.random()*0.002);
+                        
+                        setTimeout(() => {
+                            if (liveMode !== queryMode) return;
+                            pulseNode('device');
+                            updateNodePayload('device', q.domain + ' → ' + (q.answer_ip || 'Resolved'));
+                        }, 500);
+                    }, 400);
+                }
+            }
+        }, 600);
+    }
+
+    // legacy stub for safety
+    function spawnPacketSim(pathId, className, duration) {}
+
+    function recordRollingEvent(type) {
+        processedQueryHistory.push({ timestamp: Date.now(), type: type });
+    }
+
+    function consumeQueue() {
+        if (!liveMode) {
+            setTimeout(consumeQueue, 1000);
+            return;
+        }
+        if (queryQueue.length > 0) {
+            const q = queryQueue.shift();
+            animateQuery(q);
+            const delay = Math.max(150, 800 - queryQueue.length * 50);
+            setTimeout(consumeQueue, delay);
+        } else {
+            setTimeout(consumeQueue, 500);
+        }
+    }
+
+    // Start live pipeline
+    initLiveQueries();
+    setInterval(pollLiveQueries, 2000);
+    setTimeout(consumeQueue, 500);
+
+    // ==================== SIMULATION ENGINE ====================
+    let queryCount = 0, encryptedCount = 0, blockedCount = 0, resolvedCount = 0;
+
+    function simulateQuery() {
+        if (liveMode) return;
+
+        const rand = Math.random();
+        let domain, type;
+
+        if (rand < 0.65) {
+            domain = cleanDomains[Math.floor(Math.random() * cleanDomains.length)];
+            type = 'clean';
+        } else if (rand < 0.92) {
+            domain = trackerDomains[Math.floor(Math.random() * trackerDomains.length)];
+            type = 'tracker';
+        } else {
+            domain = malwareDomains[Math.floor(Math.random() * malwareDomains.length)];
+            type = 'malware';
+        }
+
+        const dnsType = dnsTypes[Math.floor(Math.random() * dnsTypes.length)];
+        const isBlocked = type !== 'clean';
+        const isCache = Math.random() < 0.6;
+        
+        const q = {
+            time: new Date().toISOString(),
+            domain: domain,
+            dns_type: dnsType,
+            client: '192.168.1.' + Math.floor(Math.random()*254+1),
+            client_proto: Math.random() > 0.5 ? 'dot' : 'doh',
+            is_blocked: isBlocked,
+            block_reason: isBlocked ? (type === 'tracker' ? 'ad-tracker' : 'malware') : '',
+            cached: isCache,
+            answer_ip: isBlocked ? '0.0.0.0' : randomIP(),
+            elapsed_ms: Math.random() * 20 + 5
+        };
+        
+        animateQuery(q);
+    }
+
+    function startSimulation() {
+        if (simInterval) clearInterval(simInterval);
+        simInterval = setInterval(simulateQuery, 800 + Math.random() * 600);
+    }
+    
+    function stopSimulation() {
+        if (simInterval) {
+            clearInterval(simInterval);
+            simInterval = null;
+        }
+    }
+
+    // ==================== ANIMATED PACKETS ====================
+    function ambientPackets() {
+        if(flowPaths.length === 0) return;
+        spawnParticle(0, '#E30613', 0.002 + Math.random()*0.002);
+        setTimeout(() => spawnParticle(1, '#3b82f6', 0.002 + Math.random()*0.002), 200);
+        setTimeout(() => {
+            if(Math.random() > 0.35) spawnParticle(2, '#10b981', 0.002 + Math.random()*0.002);
+            else spawnParticle(3, '#ef4444', 0.004 + Math.random()*0.003);
+        }, 400);
+    }
+    setInterval(ambientPackets, 2500);
+
+    // ==================== TOGGLE LOG MODE ====================
+    const liveModeToggle = document.getElementById('liveModeToggle');
+    const toggleBg = document.getElementById('toggleBg');
+    const toggleDot = document.getElementById('toggleDot');
+
+    liveModeToggle.addEventListener('change', () => {
+        liveMode = liveModeToggle.checked;
+        if (liveMode) {
+            stopSimulation();
+            toggleBg.className = 'w-8 h-4 bg-brand/30 border border-brand/50 rounded-full transition-colors duration-300';
+            toggleDot.className = 'absolute left-0.5 top-0.5 w-3 h-3 bg-brand rounded-full transition-transform duration-300 translate-x-4';
+            showToast("Switched to Live Traffic Log");
+        } else {
+            startSimulation();
+            toggleBg.className = 'w-8 h-4 bg-white/10 border border-white/5 rounded-full transition-colors duration-300';
+            toggleDot.className = 'absolute left-0.5 top-0.5 w-3 h-3 bg-gray-500 rounded-full transition-transform duration-300';
+            showToast("Switched to Simulated Traffic Log");
+        }
+    });
+
+    // ==================== COUNTER UPDATES ====================
+    function updateQPS() {
+        const now = Date.now();
+        processedQueryHistory = processedQueryHistory.filter(e => now - e.timestamp < 10000);
+        
+        let qps = 0, eps = 0, bps = 0, rps = 0, cps = 0;
+        processedQueryHistory.forEach(e => {
+            if (e.type === 'query') qps++;
+            else if (e.type === 'encrypted') eps++;
+            else if (e.type === 'blocked') bps++;
+            else if (e.type === 'resolved') rps++;
+            else if (e.type === 'cache') cps++;
+        });
+        
+        qps /= 10.0;
+        eps /= 10.0;
+        bps /= 10.0;
+        rps /= 10.0;
+        cps /= 10.0;
+        
+        if (liveMode) {
+            // Update node cards with QPS rates
+            document.getElementById('nc-device').textContent = qps.toFixed(1) + ' qps';
+            document.getElementById('nc-tls').textContent = eps.toFixed(1) + ' enc/s';
+            document.getElementById('nc-filter').textContent = bps.toFixed(1) + ' blk/s';
+            document.getElementById('nc-resolver').textContent = rps.toFixed(1) + ' rsl/s';
+            document.getElementById('nc-blocked').textContent = bps.toFixed(1) + ' blk/s';
+            
+            bwTotal.shift(); bwTotal.push(qps);
+            bwBlocked.shift(); bwBlocked.push(bps);
+            drawBWChart();
+        } else {
+            // Update node cards with simulated QPS rates
+            const simQPS = (Math.random() * 2 + 1.5);
+            const simEPS = simQPS * 0.99;
+            const simBPS = simQPS * 0.15;
+            const simRPS = simQPS - simBPS;
+            
+            document.getElementById('nc-device').textContent = simQPS.toFixed(1) + ' qps';
+            document.getElementById('nc-tls').textContent = simEPS.toFixed(1) + ' enc/s';
+            document.getElementById('nc-filter').textContent = simBPS.toFixed(1) + ' blk/s';
+            document.getElementById('nc-resolver').textContent = simRPS.toFixed(1) + ' rsl/s';
+            document.getElementById('nc-blocked').textContent = simBPS.toFixed(1) + ' blk/s';
+        }
+    }
+    setInterval(updateQPS, 1000);
+
+    function updateStatsAndCards() {
+        if (!liveMode) {
+            // Set random simulation values if not initialized
+            if (!statsInitialized) {
+                totalQueriesCount = 12450;
+                totalEncryptedCount = 12410;
+                totalBlockedCount = 1420;
+                totalResolvedCount = 11030;
+                totalCachedCount = 6120;
+                statsInitialized = true;
+            }
+            // Update bottom counters with simulated totals
+            document.getElementById('counterQueries').textContent = totalQueriesCount.toLocaleString();
+            document.getElementById('counterEncrypted').textContent = totalEncryptedCount.toLocaleString();
+            document.getElementById('counterBlocked').textContent = totalBlockedCount.toLocaleString();
+            document.getElementById('counterResolved').textContent = totalResolvedCount.toLocaleString();
+            document.getElementById('counterCached').textContent = totalCachedCount.toLocaleString();
+
+            document.getElementById('statTLS').textContent = (Math.random() * 0.5 + 1.0).toFixed(1) + 'K';
+            document.getElementById('statBlocked').textContent = (Math.random() * 3 + 11).toFixed(1) + 'K';
+            document.getElementById('statLatency').innerHTML = (Math.random() * 1 + 2).toFixed(1) + '<span class="text-lg">ms</span>';
+            document.getElementById('statCache').innerHTML = Math.floor(Math.random() * 4 + 90) + '<span class="text-lg">%</span>';
+            
+            bwTotal.shift(); bwTotal.push(Math.floor(Math.random() * 20 + 85) / 10.0);
+            bwBlocked.shift(); bwBlocked.push(Math.floor(Math.random() * 8 + 10) / 10.0);
+            drawBWChart();
+            return;
+        }
+
+        fetch('/api/stats')
+            .then(res => res.json())
+            .then(data => {
+                // Initialize today's totals from live API
+                if (!statsInitialized) {
+                    totalQueriesCount = data.dns_queries_today;
+                    totalBlockedCount = data.blocked_queries_today;
+                    totalResolvedCount = data.dns_queries_today - data.blocked_queries_today;
+                    totalCachedCount = Math.round(data.dns_queries_today * (data.cache_hit_rate / 100.0));
+                    totalEncryptedCount = Math.round(data.dns_queries_today * 0.998);
+                    
+                    document.getElementById('counterQueries').textContent = totalQueriesCount.toLocaleString();
+                    document.getElementById('counterEncrypted').textContent = totalEncryptedCount.toLocaleString();
+                    document.getElementById('counterBlocked').textContent = totalBlockedCount.toLocaleString();
+                    document.getElementById('counterResolved').textContent = totalResolvedCount.toLocaleString();
+                    document.getElementById('counterCached').textContent = totalCachedCount.toLocaleString();
+                    
+                    statsInitialized = true;
+                } else {
+                    // Sync up quietly in case queries were missed (e.g. while browser tab was inactive)
+                    if (data.dns_queries_today > totalQueriesCount) {
+                        totalQueriesCount = data.dns_queries_today;
+                        document.getElementById('counterQueries').textContent = totalQueriesCount.toLocaleString();
+                    }
+                    if (data.blocked_queries_today > totalBlockedCount) {
+                        totalBlockedCount = data.blocked_queries_today;
+                        document.getElementById('counterBlocked').textContent = totalBlockedCount.toLocaleString();
+                    }
+                    const apiResolved = data.dns_queries_today - data.blocked_queries_today;
+                    if (apiResolved > totalResolvedCount) {
+                        totalResolvedCount = apiResolved;
+                        document.getElementById('counterResolved').textContent = totalResolvedCount.toLocaleString();
+                    }
+                    const apiCached = Math.round(data.dns_queries_today * (data.cache_hit_rate / 100.0));
+                    if (apiCached > totalCachedCount) {
+                        totalCachedCount = apiCached;
+                        document.getElementById('counterCached').textContent = totalCachedCount.toLocaleString();
+                    }
+                    const apiEncrypted = Math.round(data.dns_queries_today * 0.998);
+                    if (apiEncrypted > totalEncryptedCount) {
+                        totalEncryptedCount = apiEncrypted;
+                        document.getElementById('counterEncrypted').textContent = totalEncryptedCount.toLocaleString();
+                    }
+                }
+
+                document.getElementById('statTLS').textContent = data.active_conns;
+                
+                const blocked = data.blocked_queries_today;
+                if (blocked < 1000) {
+                    document.getElementById('statBlocked').textContent = blocked;
+                } else {
+                    document.getElementById('statBlocked').textContent = (blocked / 1000).toFixed(1) + 'K';
+                }
+                
+                document.getElementById('statLatency').innerHTML = data.avg_latency_ms.toFixed(1) + '<span class="text-lg">ms</span>';
+                document.getElementById('statCache').innerHTML = Math.round(data.cache_hit_rate) + '<span class="text-lg">%</span>';
+                
+                // Render top blocked domains
+                const sorted = data.top_blocked_domains || [];
+                const container = document.getElementById('topBlocked');
+                if (sorted.length === 0) {
+                    container.innerHTML = '<div class="text-[10px] text-gray-500 font-mono text-center py-4">No blocked domains today</div>';
+                } else {
+                    const max = sorted[0][1];
+                    container.innerHTML = sorted.slice(0, 5).map(([domain, count]) => {
+                        const pct = (count / max * 100).toFixed(0);
+                        const color = 'bg-amber-500';
+                        const textColor = 'text-amber-400';
+                        return `
+                            <div class="flex items-center gap-3">
+                                <span class="text-[10px] font-mono ${textColor} w-32 truncate shrink-0">${domain}</span>
+                                <div class="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                    <div class="h-full ${color} rounded-full transition-all duration-500" style="width:${pct}%"></div>
+                                </div>
+                                <span class="text-[10px] font-mono text-gray-600 w-12 text-right">${count}</span>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            })
+            .catch(err => console.error("Error fetching system stats:", err));
+    }
+
+    function animateCounter(id, target) {
+        const el = document.getElementById(id);
+        const current = parseFloat(el.textContent) || 0;
+        const targetVal = parseFloat(target) || 0;
+        const diff = targetVal - current;
+        const steps = 10;
+        let step = 0;
+        
+        const interval = setInterval(() => {
+            step++;
+            const val = current + (diff * step / steps);
+            if (target.toString().includes('.')) {
+                el.textContent = val.toFixed(1);
+            } else {
+                el.textContent = Math.round(val);
+            }
+            if (step >= steps) {
+                clearInterval(interval);
+                el.textContent = target;
+            }
+        }, 50);
+    }
+
+    setInterval(updateStatsAndCards, 2000);
+    updateStatsAndCards();
+
+    // ==================== NODE DETAIL POPUP ====================
+    const nodeDetails = {
+        device: {
+            title: 'Your Device',
+            icon: 'lucide:laptop',
+            desc: 'Your device sends a DNS query (e.g., "What\'s the IP for google.com?"). Without protection, this query is visible to your ISP and anyone on your network in plaintext.'
+        },
+        tls: {
+            title: 'TLS Tunnel',
+            icon: 'lucide:lock-keyhole',
+            desc: 'DNS MALIK wraps your query in a TLS 1.3 encrypted tunnel using AES-256-GCM. Your ISP can see you\'re connected to DNS MALIK, but cannot read or modify your queries.'
+        },
+        filter: {
+            title: 'Ad & Threat Filter',
+            icon: 'lucide:shield-alert',
+            desc: 'Each query is checked against 2.1M+ blocklists updated in real-time. Ads, trackers, phishing domains, and malware are intercepted and blocked before resolution.'
+        },
+        resolver: {
+            title: 'DNS Resolver',
+            icon: 'lucide:globe',
+            desc: 'Clean queries are resolved through our optimized global Anycast network. Results are cached for instant future lookups — 92% of queries are served from cache.'
+        },
+        blocked: {
+            title: 'Blocked Response',
+            icon: 'lucide:ban',
+            desc: 'Malicious or ad-tracking queries return 0.0.0.0, preventing your device from ever connecting. This happens at the DNS level, so it works system-wide with no software needed.'
+        }
+    };
+
+    function highlightNode(node) {
+        const detail = nodeDetails[node];
+        if (!detail) return;
+        const popup = document.getElementById('nodeDetail');
+        document.getElementById('nodeDetailTitle').textContent = detail.title;
+        document.getElementById('nodeDetailIcon').setAttribute('icon', detail.icon);
+        document.getElementById('nodeDetailDesc').textContent = detail.desc;
+        popup.classList.remove('hidden');
+        popup.style.top = '10px';
+        popup.style.left = '10px';
+
+        clearTimeout(popup._timer);
+        popup._timer = setTimeout(() => popup.classList.add('hidden'), 6000);
+    }
+
+    // ==================== BANDWIDTH CHART ====================
+    const bwCanvas = document.getElementById('bandwidthChart');
+    const bwCtx = bwCanvas.getContext('2d');
+    let bwTotal = [], bwBlocked = [];
+    for (let i = 0; i < 60; i++) {
+        bwTotal.push(0);
+        bwBlocked.push(0);
+    }
+
+    function drawBWChart() {
+        const dpr = window.devicePixelRatio || 1;
+        const cssWidth = bwCanvas.offsetWidth;
+        const cssHeight = bwCanvas.offsetHeight || 280;
+
+        bwCanvas.width = cssWidth * dpr;
+        bwCanvas.height = cssHeight * dpr;
+        bwCtx.scale(dpr, dpr);
+        
+        if (cssWidth <= 0) return; // avoid drawing when hidden
+        
+        bwCtx.clearRect(0, 0, cssWidth, cssHeight);
+
+        // Grid
+        bwCtx.strokeStyle = 'rgba(255,255,255,0.02)'; bwCtx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) { 
+            const y = (cssHeight / 4) * i; 
+            bwCtx.beginPath(); 
+            bwCtx.moveTo(0, y); 
+            bwCtx.lineTo(cssWidth, y); 
+            bwCtx.stroke(); 
+        }
+
+        const step = cssWidth / (bwTotal.length - 1);
+        const maxVal = Math.max(...bwTotal, 0.1);
+
+        // Total area
+        bwCtx.beginPath(); bwCtx.moveTo(0, cssHeight);
+        bwTotal.forEach((v, i) => bwCtx.lineTo(i * step, cssHeight - (v / maxVal) * cssHeight * 0.8));
+        bwCtx.lineTo(cssWidth, cssHeight); bwCtx.closePath();
+        const grad1 = bwCtx.createLinearGradient(0, 0, 0, cssHeight);
+        grad1.addColorStop(0, 'rgba(227, 6, 19, 0.2)'); grad1.addColorStop(1, 'rgba(227, 6, 19, 0)');
+        bwCtx.fillStyle = grad1; bwCtx.fill();
+
+        // Total line
+        bwCtx.beginPath();
+        bwTotal.forEach((v, i) => { const x = i * step, y = cssHeight - (v / maxVal) * cssHeight * 0.8; i === 0 ? bwCtx.moveTo(x, y) : bwCtx.lineTo(x, y); });
+        bwCtx.strokeStyle = '#E30613'; bwCtx.lineWidth = 2; bwCtx.stroke();
+
+        // Blocked area
+        bwCtx.beginPath(); bwCtx.moveTo(0, cssHeight);
+        bwBlocked.forEach((v, i) => bwCtx.lineTo(i * step, cssHeight - (v / maxVal) * cssHeight * 0.8));
+        bwCtx.lineTo(cssWidth, cssHeight); bwCtx.closePath();
+        const grad2 = bwCtx.createLinearGradient(0, 0, 0, cssHeight);
+        grad2.addColorStop(0, 'rgba(245, 158, 11, 0.15)'); grad2.addColorStop(1, 'rgba(245, 158, 11, 0)');
+        bwCtx.fillStyle = grad2; bwCtx.fill();
+
+        // Blocked line
+        bwCtx.beginPath();
+        bwBlocked.forEach((v, i) => { const x = i * step, y = cssHeight - (v / maxVal) * cssHeight * 0.8; i === 0 ? bwCtx.moveTo(x, y) : bwCtx.lineTo(x, y); });
+        bwCtx.strokeStyle = '#f59e0b'; bwCtx.lineWidth = 1.5; bwCtx.stroke();
+
+        // Dots
+        const lastTotalY = cssHeight - (bwTotal[bwTotal.length - 1] / maxVal) * cssHeight * 0.8;
+        const lastBlockedY = cssHeight - (bwBlocked[bwBlocked.length - 1] / maxVal) * cssHeight * 0.8;
+        const lastX = (bwTotal.length - 1) * step;
+
+        bwCtx.beginPath(); bwCtx.arc(lastX, lastTotalY, 4, 0, Math.PI * 2); bwCtx.fillStyle = '#E30613'; bwCtx.fill();
+        bwCtx.beginPath(); bwCtx.arc(lastX, lastTotalY, 8, 0, Math.PI * 2); bwCtx.fillStyle = 'rgba(227,6,19,0.3)'; bwCtx.fill();
+        bwCtx.beginPath(); bwCtx.arc(lastX, lastBlockedY, 3, 0, Math.PI * 2); bwCtx.fillStyle = '#f59e0b'; bwCtx.fill();
+    }
+
+    drawBWChart();
+
+    // ==================== INTERACTIVE DOMAIN RESOLVER ====================
+    function resolveDomain() {
+        const input = document.getElementById('domainInput');
+        const domain = input.value.trim();
+        if (!domain) return;
+
+        const btn = document.getElementById('resolveBtn');
+        btn.innerHTML = '<iconify-icon icon="lucide:loader-2" width="14" class="animate-spin"></iconify-icon> Resolving';
+        btn.disabled = true;
+
+        const result = document.getElementById('resolveResult');
+        const steps = document.getElementById('resolveSteps');
+        const timeEl = document.getElementById('resolveTime');
+        result.classList.remove('hidden');
+        steps.innerHTML = '';
+
+        fetch(`/api/stats?action=resolve&domain=${encodeURIComponent(domain)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    timeEl.textContent = 'Error';
+                    steps.innerHTML = `<div class="text-red-400 font-mono text-xs">${data.error}</div>`;
+                    return;
+                }
+                
+                timeEl.textContent = data.query_time_ms + 'ms';
+                let delay = 300;
+                
+                data.steps.forEach((step, i) => {
+                    setTimeout(() => {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center gap-2 terminal-line py-0.5';
+                        div.innerHTML = `
+                            <iconify-icon icon="${step.icon}" width="12" class="${step.color}"></iconify-icon>
+                            <span class="text-xs font-mono ${step.color}">${step.label}</span>
+                        `;
+                        steps.appendChild(div);
+                    }, i * delay);
+                });
+
+                // Inject into visualizer timeline
+                const qTest = {
+                    time: new Date().toISOString(),
+                    domain: domain,
+                    dns_type: 'A',
+                    client: '192.168.1.Tester',
+                    client_proto: 'doh',
+                    is_blocked: data.is_blocked,
+                    block_reason: data.is_blocked ? 'policy' : '',
+                    cached: false,
+                    answer_ip: data.answers[0] || 'NXDOMAIN',
+                    elapsed_ms: data.query_time_ms
+                };
+                animateQuery(qTest);
+            })
+            .catch(err => {
+                timeEl.textContent = 'Error';
+                steps.innerHTML = `<div class="text-red-400 font-mono text-xs">Failed to connect to resolution API</div>`;
+            })
+            .finally(() => {
+                btn.innerHTML = '<iconify-icon icon="lucide:play" width="14"></iconify-icon> Resolve';
+                btn.disabled = false;
+            });
+    }
+
+    document.getElementById('domainInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') resolveDomain();
+    });
+
+    // Flow Visualizer Init
+    resizeFlowCanvas();
+    animateFlow();
+    window.addEventListener('resize', resizeFlowCanvas);
+    
+    // ==================== REVEAL ON SCROLL ====================
+    const revealObs = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('active'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+    // ==================== TOAST ====================
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+    </script>
+</body>
+</html>

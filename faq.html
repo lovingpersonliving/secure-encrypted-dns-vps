@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>FAQ — DNS MALIK</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 8L15 23V53C15 75.5 35 91.5 50 95C65 91.5 85 75.5 85 53V23L50 8Z' stroke='%23E30613' stroke-width='6' fill='none'/%3E%3Cpath d='M50 18L25 29V53C25 69.5 40 81.5 50 84C60 81.5 75 69.5 75 53V29L50 18Z' fill='rgba(227, 6, 19, 0.2)' stroke='%23E30613' stroke-width='3'/%3E%3Cpath d='M38 50L46 58L62 42' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Oswald', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: '#E30613',
+                        dark: '#050505',
+                        'dark-alt': '#0a0a0a',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::selection { background: #E30613; color: #fff; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #E30613; border-radius: 3px; }
+        .glass {
+            background: rgba(26, 26, 26, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .glass-strong {
+            background: rgba(26, 26, 26, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .gradient-border {
+            position: relative;
+        }
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, #E30613, #3b82f6, #E30613);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0.3;
+            transition: opacity 0.4s;
+        }
+        .gradient-border:hover::before { opacity: 0.8; }
+        #particles-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .animated-gradient {
+            background: linear-gradient(135deg, #E30613, #ff6b35, #3b82f6, #E30613);
+            background-size: 300% 300%;
+            animation: gradientShift 6s ease infinite;
+        }
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .hamburger span {
+            display: block; width: 24px; height: 2px;
+            background: #fff; transition: all 0.3s;
+        }
+        .hamburger.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+    </style>
+</head>
+<body class="bg-dark text-white font-sans overflow-x-hidden">
+
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- NAVIGATION -->
+    <nav id="navbar" class="fixed top-0 left-0 w-full z-50 transition-all duration-500 glass">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-lg animated-gradient flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 8L15 23V53C15 75.5 35 91.5 50 95C65 91.5 85 75.5 85 53V23L50 8Z" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M50 18L25 29V53C25 69.5 40 81.5 50 84C60 81.5 75 69.5 75 53V29L50 18Z" fill="rgba(227, 6, 19, 0.2)" stroke="#E30613" stroke-width="3"/>
+                        <path d="M38 50L46 58L62 42" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span class="font-display text-xl tracking-wider font-medium">DNS<span class="text-brand">MALIK</span></span>
+            </a>
+            <div class="hidden md:flex items-center gap-8">
+                <a href="/#features" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">Features</a>
+                <a href="/#stats" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">Stats</a>
+                <a href="/#how-it-works" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">How It Works</a>
+                <a href="/#setup" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">Setup</a>
+                <a href="/faq.html" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">FAQ</a>
+                <a href="/RealTime.html" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300 flex items-center gap-1.5 focus:outline-none">
+                    <iconify-icon icon="lucide:log-in" width="16" class="align-middle"></iconify-icon> Logon
+                </a>
+            </div>
+            <button id="menuBtn" class="md:hidden hamburger flex flex-col gap-[6px] p-2">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="md:hidden hidden glass-strong">
+            <div class="px-6 py-8 flex flex-col gap-4">
+                <a href="/#features" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">Features</a>
+                <a href="/#stats" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">Stats</a>
+                <a href="/#how-it-works" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">How It Works</a>
+                <a href="/#setup" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">Setup</a>
+                <a href="/faq.html" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">FAQ</a>
+                <a href="/RealTime.html" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand py-2 flex items-center gap-1.5 focus:outline-none">
+                    <iconify-icon icon="lucide:log-in" width="16" class="align-middle"></iconify-icon> Logon
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <main class="relative z-10 pt-32 pb-24 px-6 max-w-4xl mx-auto">
+        <div class="text-center mb-16">
+            <span class="text-xs tracking-[0.3em] uppercase text-brand font-mono mb-4 block">Knowledge Base</span>
+            <h1 class="font-display text-4xl md:text-6xl font-medium tracking-tight mb-6">Frequently Asked Questions</h1>
+            <p class="text-gray-400 font-light max-w-xl mx-auto leading-relaxed">Everything you need to know about DNS MALIK, its security features, and how it handles your network requests.</p>
+        </div>
+
+        <div class="space-y-6">
+            <div id="faq-what-is-dns" class="glass rounded-2xl p-6 md:p-8 gradient-border scroll-mt-24">
+                <h3 class="font-display text-xl tracking-wide uppercase text-brand mb-4">What is DNS MALIK and why should I use it?</h3>
+                <p class="text-gray-400 font-light leading-relaxed text-sm">DNS MALIK is a private, encrypted DNS resolver built on top of high-performance infrastructure. It functions as an intermediary translator between your browser and the web, resolving domains securely. By using DNS MALIK, your requests are encrypted via TLS, keeping your search history private from ISPs and intermediate snooping devices.</p>
+            </div>
+
+            <div id="faq-is-free" class="glass rounded-2xl p-6 md:p-8 gradient-border scroll-mt-24">
+                <h3 class="font-display text-xl tracking-wide uppercase text-brand mb-4">Is DNS MALIK free to use?</h3>
+                <p class="text-gray-400 font-light leading-relaxed text-sm">Yes, DNS MALIK is 100% free. It is a personal and family-centric project deployed on Oracle Cloud's Free Tier architecture. There are no fees, premium tiers, or hidden subscriptions.</p>
+            </div>
+
+            <div id="faq-slow-internet" class="glass rounded-2xl p-6 md:p-8 gradient-border scroll-mt-24">
+                <h3 class="font-display text-xl tracking-wide uppercase text-brand mb-4">Does DNS MALIK slow down my internet?</h3>
+                <p class="text-gray-400 font-light leading-relaxed text-sm">No. In fact, it typically speeds up page load times. DNS MALIK uses aggressive local memory caching for instant lookups. Additionally, because it drops requests for ads, telemetry servers, and tracking scripts at the DNS level, your browser downloads significantly less data on each webpage visit.</p>
+            </div>
+
+            <div id="faq-data-collected" class="glass rounded-2xl p-6 md:p-8 gradient-border scroll-mt-24">
+                <h3 class="font-display text-xl tracking-wide uppercase text-brand mb-4">What data does DNS MALIK collect?</h3>
+                <p class="text-gray-400 font-light leading-relaxed text-sm">We enforce a strict **Zero-Logs policy**. DNS queries are processed entirely in memory and are discarded. We do not write queries to disk, compile search behaviors, or share any network footprints. This project is built by and for family to maximize security, not commercial tracking.</p>
+            </div>
+
+            <div id="faq-devices-supported" class="glass rounded-2xl p-6 md:p-8 gradient-border scroll-mt-24">
+                <h3 class="font-display text-xl tracking-wide uppercase text-brand mb-4">Which devices are supported?</h3>
+                <p class="text-gray-400 font-light leading-relaxed text-sm">Any device that allows manual DNS entries or supports Secure Private DNS (DNS-over-TLS). This includes Windows, macOS, Linux, Android, iOS, smart home devices, and routers (which automatically protects every device connected to your Wi-Fi).</p>
+            </div>
+
+            <div id="faq-windows-persistence" class="glass rounded-2xl p-6 md:p-8 gradient-border scroll-mt-24">
+                <h3 class="font-display text-xl tracking-wide uppercase text-brand mb-4">Does this DNS setting persist after a restart, and does it apply to all Wi-Fi networks?</h3>
+                <p class="text-gray-400 font-light leading-relaxed text-sm mb-4"><strong>Yes, it persists across restarts.</strong> Once you save the DNS IP and HTTPS template, Windows stores these settings in the registry permanently so you never have to re-enter them.</p>
+                <p class="text-gray-400 font-light leading-relaxed text-sm mb-4"><strong>By default, Windows 11 saves DNS settings per network SSID.</strong> If you configure it via the default Windows Settings app, it will only apply to that specific Wi-Fi connection. If you connect to another network (such as a mobile hotspot or public Wi-Fi), Windows will fall back to the default DNS.</p>
+                <p class="text-gray-400 font-light leading-relaxed text-sm mb-2"><strong>How to apply DNS globally to all networks (Recommended):</strong></p>
+                <ol class="list-decimal pl-5 text-gray-400 font-light text-sm space-y-2">
+                    <li>Press <kbd class="px-1.5 py-0.5 rounded bg-white/10 font-mono text-xs text-white">Win + R</kbd>, type <code class="text-brand font-mono">ncpa.cpl</code>, and press <strong>Enter</strong> to open the network adapters panel.</li>
+                    <li>Right-click your active <strong>Wi-Fi</strong> adapter and select <strong>Properties</strong>.</li>
+                    <li>Double-click on <strong>Internet Protocol Version 4 (TCP/IPv4)</strong> in the list.</li>
+                    <li>Select <strong>Use the following DNS server addresses</strong> and enter <code class="text-brand font-mono">129.153.222.165</code> as the Preferred DNS server. Click <strong>OK</strong> to close both dialogs.</li>
+                    <li>Open Windows <strong>Settings ➔ Network & internet ➔ Wi-Fi</strong>, scroll down to the bottom, click on your Wi-Fi properties, edit the <strong>DNS server assignment</strong> to set encryption to <strong>Encrypted only (DNS over HTTPS)</strong>, and paste the template URL: <code class="text-brand font-mono select-all">https://windows.dnsmalik.duckdns.org/dns-query</code>.</li>
+                </ol>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="relative z-10 border-t border-white/5 bg-dark-alt/30 pt-16 pb-8 px-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <p class="text-xs text-gray-600 tracking-wide">&copy; 2025 DNS MALIK. All rights reserved. Your privacy is our priority.</p>
+            <div class="flex items-center gap-4">
+                <a href="/privacy.html" class="text-xs text-gray-500 hover:text-brand transition-colors">Privacy Policy</a>
+                <span class="text-gray-700">|</span>
+                <a href="/status.html" class="text-xs text-gray-500 hover:text-brand transition-colors">Status Page</a>
+                <span class="text-gray-700">|</span>
+                <a href="/contact.html" class="text-xs text-gray-500 hover:text-brand transition-colors">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Particles
+        const particleCanvas = document.getElementById('particles-canvas');
+        const pCtx = particleCanvas.getContext('2d');
+        let particles = [];
+        const PARTICLE_COUNT = 40;
+
+        function resizeParticleCanvas() {
+            particleCanvas.width = window.innerWidth;
+            particleCanvas.height = window.innerHeight;
+        }
+        resizeParticleCanvas();
+        window.addEventListener('resize', resizeParticleCanvas);
+
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * particleCanvas.width;
+                this.y = Math.random() * particleCanvas.height;
+                this.size = Math.random() * 1.5 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.2;
+                this.speedY = (Math.random() - 0.5) * 0.2;
+                this.opacity = Math.random() * 0.4 + 0.1;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x < 0 || this.x > particleCanvas.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > particleCanvas.height) this.speedY *= -1;
+            }
+            draw() {
+                pCtx.beginPath();
+                pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                pCtx.fillStyle = `rgba(227, 6, 19, ${this.opacity})`;
+                pCtx.fill();
+            }
+        }
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
+        function animateParticles() {
+            pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        // Hamburger Menu
+        const menuBtn = document.getElementById('menuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        menuBtn.addEventListener('click', () => {
+            menuBtn.classList.toggle('open');
+            mobileMenu.classList.toggle('hidden');
+        });
+    </script>
+</body>
+</html>

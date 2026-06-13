@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Network Status — DNS MALIK</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 8L15 23V53C15 75.5 35 91.5 50 95C65 91.5 85 75.5 85 53V23L50 8Z' stroke='%23E30613' stroke-width='6' fill='none'/%3E%3Cpath d='M50 18L25 29V53C25 69.5 40 81.5 50 84C60 81.5 75 69.5 75 53V29L50 18Z' fill='rgba(227, 6, 19, 0.2)' stroke='%23E30613' stroke-width='3'/%3E%3Cpath d='M38 50L46 58L62 42' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Oswald', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: '#E30613',
+                        dark: '#050505',
+                        'dark-alt': '#0a0a0a',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::selection { background: #E30613; color: #fff; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #E30613; border-radius: 3px; }
+        .glass {
+            background: rgba(26, 26, 26, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .glass-strong {
+            background: rgba(26, 26, 26, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .gradient-border {
+            position: relative;
+        }
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, #E30613, #3b82f6, #E30613);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0.3;
+            transition: opacity 0.4s;
+        }
+        .gradient-border:hover::before { opacity: 0.8; }
+        #particles-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .animated-gradient {
+            background: linear-gradient(135deg, #E30613, #ff6b35, #3b82f6, #E30613);
+            background-size: 300% 300%;
+            animation: gradientShift 6s ease infinite;
+        }
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .hamburger span {
+            display: block; width: 24px; height: 2px;
+            background: #fff; transition: all 0.3s;
+        }
+        .hamburger.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+    </style>
+</head>
+<body class="bg-dark text-white font-sans overflow-x-hidden">
+
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- NAVIGATION -->
+    <nav id="navbar" class="fixed top-0 left-0 w-full z-50 transition-all duration-500 glass">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-lg animated-gradient flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 8L15 23V53C15 75.5 35 91.5 50 95C65 91.5 85 75.5 85 53V23L50 8Z" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M50 18L25 29V53C25 69.5 40 81.5 50 84C60 81.5 75 69.5 75 53V29L50 18Z" fill="rgba(227, 6, 19, 0.2)" stroke="#E30613" stroke-width="3"/>
+                        <path d="M38 50L46 58L62 42" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span class="font-display text-xl tracking-wider font-medium">DNS<span class="text-brand">MALIK</span></span>
+            </a>
+            <div class="hidden md:flex items-center gap-8">
+                <a href="/#features" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">Features</a>
+                <a href="/#stats" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">Stats</a>
+                <a href="/#how-it-works" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">How It Works</a>
+                <a href="/#setup" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">Setup</a>
+                <a href="/faq.html" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300">FAQ</a>
+                <a href="/RealTime.html" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors duration-300 flex items-center gap-1.5 focus:outline-none">
+                    <iconify-icon icon="lucide:log-in" width="16" class="align-middle"></iconify-icon> Logon
+                </a>
+                <a href="/#setup" class="ml-4 px-6 py-2.5 bg-brand hover:bg-red-700 text-white text-sm tracking-widest uppercase font-medium transition-all duration-300 rounded-lg">
+                    Get Started
+                </a>
+            </div>
+            <button id="menuBtn" class="md:hidden hamburger flex flex-col gap-[6px] p-2">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="md:hidden hidden glass-strong">
+            <div class="px-6 py-8 flex flex-col gap-4">
+                <a href="/#features" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">Features</a>
+                <a href="/#stats" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">Stats</a>
+                <a href="/#how-it-works" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">How It Works</a>
+                <a href="/#setup" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">Setup</a>
+                <a href="/faq.html" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand transition-colors py-2 mobile-link">FAQ</a>
+                <a href="/RealTime.html" class="text-sm tracking-wide uppercase text-gray-400 hover:text-brand py-2 flex items-center gap-1.5 focus:outline-none">
+                    <iconify-icon icon="lucide:log-in" width="16" class="align-middle"></iconify-icon> Logon
+                </a>
+                <a href="/#setup" class="mt-4 px-6 py-3 bg-brand text-white text-sm tracking-widest uppercase font-medium text-center rounded-lg mobile-link">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <main class="relative z-10 pt-32 pb-24 px-6 max-w-4xl mx-auto">
+        <div class="text-center mb-12">
+            <span class="text-xs tracking-[0.3em] uppercase text-brand font-mono mb-4 block">System Uptime</span>
+            <h1 class="font-display text-4xl md:text-6xl font-medium tracking-tight mb-6">Network Health Status</h1>
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-4">
+                <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                <span class="text-xs tracking-widest uppercase text-green-400 font-mono">All Systems Operational</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Node info -->
+            <div class="glass rounded-2xl p-6 gradient-border">
+                <h3 class="font-display text-sm tracking-widest uppercase text-gray-400 mb-6">Service Health</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-300">US Phoenix West Node</span>
+                        <span class="text-xs font-mono text-green-400 bg-green-500/10 px-2 py-0.5 rounded">ACTIVE</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-300">WireGuard VPN Tunnel</span>
+                        <span class="text-xs font-mono text-green-400 bg-green-500/10 px-2 py-0.5 rounded">ONLINE</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-300">AdGuard Secure Resolver</span>
+                        <span class="text-xs font-mono text-green-400 bg-green-500/10 px-2 py-0.5 rounded">ONLINE</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-300">Encrypted TLS Channel</span>
+                        <span class="text-xs font-mono text-green-400 bg-green-500/10 px-2 py-0.5 rounded">SECURE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Server Specs Info -->
+            <div class="glass rounded-2xl p-6 gradient-border">
+                <h3 class="font-display text-sm tracking-widest uppercase text-gray-400 mb-6">Metrics</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-300">Uptime</span>
+                        <span class="text-xs font-mono text-white">99.99%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-300">Average Processing Speed</span>
+                        <span class="text-xs font-mono text-white" id="latencyVal">-- ms</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-300">Requests Processed Today</span>
+                        <span class="text-xs font-mono text-white" id="queriesVal">--</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-300">Memory Load</span>
+                        <span class="text-xs font-mono text-white" id="memVal">--%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Load Section with Real-Time Chart -->
+        <div class="glass rounded-2xl p-6 gradient-border mb-8">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <h3 class="font-display text-sm tracking-widest uppercase text-gray-400">Real-Time Performance Monitor</h3>
+                <div class="flex items-center gap-6 text-xs font-mono">
+                    <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-brand"></span> CPU</div>
+                    <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> RAM</div>
+                    <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Network</div>
+                </div>
+            </div>
+            <div class="mb-6">
+                <canvas id="performanceChart" height="180" class="w-full h-[180px]"></canvas>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-white/5">
+                <div>
+                    <div class="flex justify-between text-xs mb-1.5">
+                        <span class="text-gray-400 uppercase tracking-wider">Host CPU Utilization</span>
+                        <span class="font-mono text-brand" id="cpuText">0%</span>
+                    </div>
+                    <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full animated-gradient" id="cpuBar" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-1.5">
+                        <span class="text-gray-400 uppercase tracking-wider">Network Throughput</span>
+                        <span class="font-mono text-emerald-400" id="netText">0.0 KB/s</span>
+                    </div>
+                    <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" id="netBar" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="relative z-10 border-t border-white/5 bg-dark-alt/30 pt-16 pb-8 px-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <p class="text-xs text-gray-600 tracking-wide">&copy; 2025 DNS MALIK. All rights reserved. Your privacy is our priority.</p>
+            <div class="flex items-center gap-4">
+                <a href="/privacy.html" class="text-xs text-gray-500 hover:text-brand transition-colors">Privacy Policy</a>
+                <span class="text-gray-700">|</span>
+                <a href="/status.html" class="text-xs text-brand hover:text-red-500 transition-colors">Status Page</a>
+                <span class="text-gray-700">|</span>
+                <a href="/contact.html" class="text-xs text-gray-500 hover:text-brand transition-colors">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Particles
+        const particleCanvas = document.getElementById('particles-canvas');
+        const pCtx = particleCanvas.getContext('2d');
+        let particles = [];
+        const PARTICLE_COUNT = 40;
+
+        function resizeParticleCanvas() {
+            particleCanvas.width = window.innerWidth;
+            particleCanvas.height = window.innerHeight;
+        }
+        resizeParticleCanvas();
+        window.addEventListener('resize', resizeParticleCanvas);
+
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * particleCanvas.width;
+                this.y = Math.random() * particleCanvas.height;
+                this.size = Math.random() * 1.5 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.2;
+                this.speedY = (Math.random() - 0.5) * 0.2;
+                this.opacity = Math.random() * 0.4 + 0.1;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x < 0 || this.x > particleCanvas.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > particleCanvas.height) this.speedY *= -1;
+            }
+            draw() {
+                pCtx.beginPath();
+                pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                pCtx.fillStyle = `rgba(227, 6, 19, ${this.opacity})`;
+                pCtx.fill();
+            }
+        }
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
+        function animateParticles() {
+            pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        // Hamburger Menu
+        const menuBtn = document.getElementById('menuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        menuBtn.addEventListener('click', () => {
+            menuBtn.classList.toggle('open');
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Real-Time Stats Chart
+        const chartCanvas = document.getElementById('performanceChart');
+        const ctx = chartCanvas.getContext('2d');
+        const maxHistoryPoints = 60; // 60 seconds rolling window
+        const statsHistory = Array(maxHistoryPoints).fill().map(() => ({ cpu: 0, mem: 0, net: 0 }));
+
+        function drawChart() {
+            const dpr = window.devicePixelRatio || 1;
+            const width = chartCanvas.width = chartCanvas.offsetWidth * dpr;
+            const height = chartCanvas.height = 180 * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const cssWidth = chartCanvas.offsetWidth;
+            const cssHeight = 180;
+
+            ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+            // Grid lines
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = (cssHeight / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(cssWidth, y);
+                ctx.stroke();
+            }
+
+            const step = cssWidth / (maxHistoryPoints - 1);
+
+            function drawMetric(key, color, fillGradStart, fillGradEnd) {
+                ctx.beginPath();
+                statsHistory.forEach((pt, i) => {
+                    const x = i * step;
+                    const val = pt[key];
+                    const y = cssHeight - (val / 100) * cssHeight;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                if (fillGradStart) {
+                    ctx.lineTo((statsHistory.length - 1) * step, cssHeight);
+                    ctx.lineTo(0, cssHeight);
+                    ctx.closePath();
+                    const gradient = ctx.createLinearGradient(0, 0, 0, cssHeight);
+                    gradient.addColorStop(0, fillGradStart);
+                    gradient.addColorStop(1, fillGradEnd);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                }
+            }
+
+            // Draw RAM (blue), Network (emerald), CPU (red)
+            drawMetric('mem', '#3b82f6', 'rgba(59, 130, 246, 0.05)', 'rgba(59, 130, 246, 0)');
+            drawMetric('net', '#10b981', 'rgba(16, 185, 129, 0.02)', 'rgba(16, 185, 129, 0)');
+            drawMetric('cpu', '#E30613', 'rgba(227, 6, 19, 0.12)', 'rgba(227, 6, 19, 0)');
+        }
+
+        // Real-Time Stats Fetching
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/stats');
+                if (!res.ok) throw new Error('API failure');
+                const data = await res.json();
+                
+                // Update elements
+                document.getElementById('latencyVal').textContent = data.avg_latency_ms.toFixed(1) + ' ms';
+                document.getElementById('queriesVal').textContent = data.dns_queries_today.toLocaleString();
+                document.getElementById('memVal').textContent = Math.round(data.mem_usage) + '%';
+                
+                document.getElementById('cpuText').textContent = Math.round(data.cpu_usage) + '%';
+                document.getElementById('cpuBar').style.width = data.cpu_usage + '%';
+                
+                document.getElementById('netText').textContent = data.net_speed_text;
+                document.getElementById('netBar').style.width = data.net_usage + '%';
+
+                // Append to history and draw
+                statsHistory.push({ cpu: data.cpu_usage, mem: data.mem_usage, net: data.net_usage });
+                if (statsHistory.length > maxHistoryPoints) {
+                    statsHistory.shift();
+                }
+                drawChart();
+            } catch (err) {
+                console.error("Status Page API Error:", err);
+            }
+        }
+        
+        fetchStats();
+        setInterval(fetchStats, 1000);
+    </script>
+</body>
+</html>

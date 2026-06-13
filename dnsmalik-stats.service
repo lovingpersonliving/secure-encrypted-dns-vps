@@ -1,0 +1,13 @@
+[Unit]
+Description=DNS Malik Real-Time Stats API
+After=network.target AdGuardHome.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /usr/local/bin/dnsmalik_stats_api.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
