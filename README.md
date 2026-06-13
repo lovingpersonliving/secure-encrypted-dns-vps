@@ -75,19 +75,22 @@ flowchart TD
     
     Nginx -->|Proxy Pass / Port 8444| AGH_DoH[AdGuard Home DNS Core]
     
-    subgraph AdGuard Home DNS Core [AdGuard Home DNS Engine]
+    subgraph AGH["AdGuard Home DNS Engine"]
         AGH_DoT
         AGH_DoH
     end
     
-    AdGuard_Home_DNS_Core -->|Filter Lists / 2.1M Rules| Blocked{Blocked?}
-    Blocked -->|Yes| BlockResponse[Return 0.0.0.0 / Blocked Page]
-    Blocked -->|No| CacheCheck{Cached?}
+    AGH_DoT -->|Filter Lists / 2.1M Rules| Blocked{"Blocked?"}
+    AGH_DoH -->|Filter Lists / 2.1M Rules| Blocked
+    
+    Blocked -->|Yes| BlockResponse["Return 0.0.0.0 / Blocked Page"]
+    Blocked -->|No| CacheCheck{"Cached?"}
     
     CacheCheck -->|Yes| CacheResponse[Resolve from DNS Cache]
-    CacheCheck -->|No| Upstream[Query Upstream DNS: Cloudflare/Google]
+    CacheCheck -->|No| Upstream["Query Upstream DNS: Cloudflare / Google"]
     
-    AdGuard_Home_DNS_Core -.->|Internal Polling| PyAPI[Python Backend Stats API - Port 8085]
+    AGH_DoT -.->|Internal Polling| PyAPI["Python Backend Stats API - Port 8085"]
+    AGH_DoH -.->|Internal Polling| PyAPI
     PyAPI -.->|Serve /api/stats| WebPortal[Query Visualizer HTML5 Canvas]
 ```
 
